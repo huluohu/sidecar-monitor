@@ -95,6 +95,7 @@ input:focus, select:focus {
 
 .toolbar > * { -webkit-app-region: no-drag; }
 
+.toolbar-brand,
 .toolbar-title,
 .toolbar-site-count,
 .toolbar-columns {
@@ -104,12 +105,23 @@ input:focus, select:focus {
   line-height: 1;
 }
 
+.toolbar-brand {
+  gap: 6px;
+  margin-right: 4px;
+}
+
+.toolbar-logo {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 .toolbar-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-dim);
   letter-spacing: 0.04em;
-  margin-right: 4px;
 }
 
 .toolbar-site-count {

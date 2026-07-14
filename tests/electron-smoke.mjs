@@ -57,6 +57,15 @@ try {
   })
 
   const page = await electronApp.firstWindow()
+  const runtimePlatform = await page.evaluate(() => window.monitorAPI.platform)
+  const toolbarLogoCount = await page.locator('.toolbar-logo').count()
+  const expectedToolbarLogoCount = runtimePlatform === 'darwin' ? 1 : 0
+  if (toolbarLogoCount !== expectedToolbarLogoCount) {
+    throw new Error(
+      `Expected ${expectedToolbarLogoCount} toolbar logos on ${runtimePlatform}, received ${toolbarLogoCount}`,
+    )
+  }
+
   const enteredFullscreen = waitForWindowEvent(electronApp, 'enter-full-screen')
   await page.locator('button[title="全屏"]').click()
   await enteredFullscreen

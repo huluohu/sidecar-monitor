@@ -4,6 +4,8 @@ import type { AppConfig, SiteState, SlotBounds, AppMetrics } from '@shared/types
 
 /** Minimal API exposed to the trusted renderer via contextBridge. */
 const monitorAPI = {
+  platform: process.platform,
+
   // ── Config ────────────────────────────────────────────────────────────────
   getConfig: (): Promise<AppConfig> =>
     ipcRenderer.invoke(IPC.CONFIG_GET),

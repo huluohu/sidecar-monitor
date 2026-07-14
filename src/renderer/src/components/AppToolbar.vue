@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import appIconUrl from '@resources/icon.svg?url'
+
 const props = defineProps<{
   failedCount: number
   isFocused: boolean
@@ -22,6 +24,8 @@ const COLUMN_OPTIONS = [
   })),
 ]
 
+const isMacOS = window.monitorAPI.platform === 'darwin'
+
 function onColsChange(e: Event) {
   const val = (e.target as HTMLSelectElement).value
   emit('setColumns', val === 'auto' ? 'auto' : Number(val))
@@ -30,7 +34,16 @@ function onColsChange(e: Event) {
 
 <template>
   <header class="toolbar">
-    <span class="toolbar-title">sidecar-monitor</span>
+    <span class="toolbar-brand">
+      <img
+        v-if="isMacOS"
+        class="toolbar-logo"
+        :src="appIconUrl"
+        alt=""
+        aria-hidden="true"
+      >
+      <span class="toolbar-title">sidecar-monitor</span>
+    </span>
 
     <span v-if="siteCount > 0" class="btn toolbar-site-count">
       {{ siteCount }} 场地

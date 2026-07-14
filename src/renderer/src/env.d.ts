@@ -1,6 +1,9 @@
+/// <reference types="vite/client" />
+
 import type { AppConfig, SiteState, SlotBounds, AppMetrics } from '@shared/types'
 
 export interface MonitorAPI {
+  platform: NodeJS.Platform
   getConfig: () => Promise<AppConfig>
   saveConfig: (config: AppConfig) => Promise<void>
   importConfig: () => Promise<AppConfig | null>
