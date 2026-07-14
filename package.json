@@ -1,0 +1,40 @@
+{
+  "name": "sidecar-monitor",
+  "version": "0.1.1",
+  "description": "Multi-site Sidecar monitor desktop tool",
+  "homepage": "https://github.com/huluohu/sidecar-monitor",
+  "author": {
+    "name": "huluohu",
+    "email": "fooololo@gmail.com"
+  },
+  "desktopName": "sidecar-monitor.desktop",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:electron": "npm run build && node tests/electron-smoke.mjs",
+    "build": "electron-vite build",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^5.0.0",
+    "happy-dom": "^20.10.6",
+    "playwright": "^1.61.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^4.1.0",
+    "vue-tsc": "^3.3.0"
+  },
+  "dependencies": {
+    "pinia": "^3.0.0",
+    "vue": "^3.5.0"
+  }
+}

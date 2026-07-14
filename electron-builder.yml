@@ -1,0 +1,52 @@
+appId: com.opentcs.sidecar-monitor
+productName: sidecar-monitor
+executableName: sidecar-monitor
+copyright: Copyright © 2024
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - out/**/*
+  - package.json
+
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.utilities
+  artifactName: sidecar-monitor-${version}-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+
+win:
+  icon: resources/icon.ico
+  artifactName: sidecar-monitor-${version}-${arch}.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+
+linux:
+  icon: resources/icon.png
+  category: Utility
+  maintainer: huluohu <fooololo@gmail.com>
+  syncDesktopName: true
+  synopsis: Multi-site Sidecar monitor
+  artifactName: sidecar-monitor-${version}-${arch}.${ext}
+  target:
+    - AppImage
+    - deb
+    - rpm
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerLanguages: [en_US]
+
+publish: null

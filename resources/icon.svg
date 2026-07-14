@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">sidecar-monitor application icon</title>
+  <defs>
+    <linearGradient id="background" x1="120" y1="80" x2="904" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1e2d3e"/>
+      <stop offset="1" stop-color="#101722"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="250" y1="224" x2="790" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4e9de8"/>
+      <stop offset="1" stop-color="#36b7b4"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#080d14" flood-opacity=".42"/>
+    </filter>
+  </defs>
+
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="url(#background)"/>
+  <path d="M208 322a82 82 0 0 1 82-82h444a82 82 0 0 1 82 82v380a82 82 0 0 1-82 82H290a82 82 0 0 1-82-82z"
+        fill="#182332" stroke="#314158" stroke-width="24" filter="url(#shadow)"/>
+
+  <rect x="274" y="306" width="204" height="164" rx="38" fill="#223348"/>
+  <rect x="546" y="306" width="204" height="164" rx="38" fill="#223348"/>
+  <rect x="274" y="554" width="204" height="164" rx="38" fill="#223348"/>
+  <rect x="546" y="554" width="204" height="164" rx="38" fill="#223348"/>
+
+  <path d="M704 364c-46-47-129-54-178-15-55 43-35 111 28 131l85 27c72 23 94 98 39 143-50 42-143 35-190-17"
+        fill="none" stroke="url(#signal)" stroke-width="66" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="302" cy="334" r="15" fill="#36b7b4"/>
+  <circle cx="722" cy="690" r="15" fill="#4e9de8"/>
+</svg>

@@ -1,0 +1,110 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            script: dist:mac
+            artifact: sidecar-monitor-macos
+          - name: Windows
+            os: windows-2022
+            script: dist:win
+            artifact: sidecar-monitor-windows
+          - name: Linux x64
+            os: ubuntu-24.04
+            script: dist:linux
+            artifact: sidecar-monitor-linux-x64
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            script: dist:linux
+            artifact: sidecar-monitor-linux-arm64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Linux packaging tools
+        if: startsWith(matrix.name, 'Linux')
+        run: sudo apt-get update && sudo apt-get install --yes rpm
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Package application
+        run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$package_version" || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match package version $package_version"
+            exit 1
+          }
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sidecar-monitor-*
+          path: release
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/*
