@@ -32,7 +32,7 @@ function onColsChange(e: Event) {
   <header class="toolbar">
     <span class="toolbar-title">sidecar-monitor</span>
 
-    <span v-if="siteCount > 0" class="btn" style="font-family: var(--font-mono); font-size: 11px; color: var(--color-text-dim)">
+    <span v-if="siteCount > 0" class="btn toolbar-site-count">
       {{ siteCount }} 场地
     </span>
 
@@ -45,11 +45,11 @@ function onColsChange(e: Event) {
 
     <div class="toolbar-sep" />
 
-    <label style="font-size: 11px; color: var(--color-text-dim); display:flex; align-items:center; gap:4px;">
+    <label class="toolbar-columns">
       列数
       <select
         :value="columns"
-        style="height:26px; font-size:11px; padding:0 4px;"
+        class="toolbar-columns-select"
         @change="onColsChange"
       >
         <option v-for="opt in COLUMN_OPTIONS" :key="String(opt.value)" :value="opt.value">

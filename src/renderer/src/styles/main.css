@@ -95,12 +95,39 @@ input:focus, select:focus {
 
 .toolbar > * { -webkit-app-region: no-drag; }
 
+.toolbar-title,
+.toolbar-site-count,
+.toolbar-columns {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 .toolbar-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-dim);
   letter-spacing: 0.04em;
   margin-right: 4px;
+}
+
+.toolbar-site-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.toolbar-columns {
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.toolbar-columns-select {
+  height: 26px;
+  padding: 0 4px;
+  font-size: 11px;
 }
 
 .toolbar-sep {
