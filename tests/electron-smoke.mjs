@@ -16,6 +16,27 @@ const server = createServer((_req, res) => {
   res.end('<!doctype html><title>Test site</title><main>ready</main>')
 })
 
+function waitForWindowEvent(electronApp, eventName, timeout = 5_000) {
+  return electronApp.evaluate(
+    ({ BrowserWindow }, options) => new Promise((resolveEvent, rejectEvent) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) {
+        rejectEvent(new Error('Main window not found'))
+        return
+      }
+      const timer = setTimeout(
+        () => rejectEvent(new Error(`Window did not emit ${options.eventName}`)),
+        options.timeout,
+      )
+      window.once(options.eventName, () => {
+        clearTimeout(timer)
+        resolveEvent()
+      })
+    }),
+    { eventName, timeout },
+  )
+}
+
 let electronApp
 try {
   await new Promise((resolveListen, reject) => {
@@ -36,6 +57,52 @@ try {
   })
 
   const page = await electronApp.firstWindow()
+  const enteredFullscreen = waitForWindowEvent(electronApp, 'enter-full-screen')
+  await page.locator('button[title="全屏"]').click()
+  await enteredFullscreen
+  const leftFullscreen = waitForWindowEvent(electronApp, 'leave-full-screen').then(
+    () => null,
+    error => error,
+  )
+  const observedEscape = electronApp.evaluate(({ BrowserWindow }) =>
+    new Promise((resolveInput, rejectInput) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) {
+        rejectInput(new Error('Main window not found'))
+        return
+      }
+      const timer = setTimeout(
+        () => rejectInput(new Error('Main window did not receive Escape')),
+        5_000,
+      )
+      window.webContents.once('before-input-event', (_event, input) => {
+        clearTimeout(timer)
+        resolveInput({
+          type: input.type,
+          key: input.key,
+          code: input.code,
+          isFullScreen: window.isFullScreen(),
+        })
+      })
+    }),
+  )
+  await electronApp.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.webContents.sendInputEvent({
+      type: 'keyDown',
+      keyCode: 'Escape',
+    })
+  })
+  const escapeInput = await observedEscape
+  if (
+    escapeInput.type !== 'keyDown' ||
+    escapeInput.key !== 'Escape' ||
+    !escapeInput.isFullScreen
+  ) {
+    throw new Error(`Unexpected Escape input: ${JSON.stringify(escapeInput)}`)
+  }
+  const leaveError = await leftFullscreen
+  if (leaveError) throw leaveError
+
   await page.locator('button[title="设置"]').click()
 
   for (let index = 1; index <= 5; index++) {

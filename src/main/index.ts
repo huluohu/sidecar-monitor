@@ -177,4 +177,11 @@ app.on('window-all-closed', () => {
 // Prevent additional windows
 app.on('web-contents-created', (_event, wc) => {
   wc.setWindowOpenHandler(() => ({ action: 'deny' }))
+  wc.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.key !== 'Escape' || !mainWindow?.isFullScreen()) {
+      return
+    }
+    event.preventDefault()
+    mainWindow.setFullScreen(false)
+  })
 })
