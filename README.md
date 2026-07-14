@@ -40,20 +40,6 @@ npm run build
 
 导出配置的默认文件名：`sidecar-monitor-config.json`。
 
-## 旧数据迁移（site-wallboard → sidecar-monitor）
-
-首次启动时，`sidecar-monitor` 会自动检测并迁移旧版 `site-wallboard` 的数据：
-
-- **候选旧路径**（按顺序尝试）：
-  - `<appData>/site-wallboard`
-  - `<appData>/Site Wallboard`
-- **迁移内容**：
-  - `config.json`（仅在新目录中不存在时复制）
-  - `Partitions/site-*`（逐个复制，已存在的不覆盖）
-- **不迁移**：锁文件、Cache、Code Cache 等 Chromium 生成目录
-- **旧数据不会被删除**，可作为回退备份
-
-迁移完成后会写入 `.sidecar-monitor-migration-done` 标记，后续启动直接跳过。
 
 ### Cookie 加密说明
 
