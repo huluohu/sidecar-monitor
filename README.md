@@ -1,10 +1,10 @@
-# sidecar-monitor
+# Sidecar Monitor
 
 多场地 Sidecar 监控桌面工具（Electron + Vue 3）。
 
 ## 概述
 
-`sidecar-monitor` 在一个桌面窗口内同时显示多个 OpenTCS Sidecar 场地页面，支持会话隔离、配置持久化、聚焦模式和跨平台打包。
+`Sidecar Monitor` 在一个桌面窗口内同时显示多个 OpenTCS Sidecar 场地页面，支持会话隔离、配置持久化、聚焦模式和跨平台打包。
 
 ## 开发
 

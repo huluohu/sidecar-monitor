@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import appIconUrl from '@resources/icon.svg?url'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{
   failedCount: number
@@ -42,15 +43,16 @@ function onColsChange(e: Event) {
         alt=""
         aria-hidden="true"
       >
-      <span class="toolbar-title">sidecar-monitor</span>
+      <span class="toolbar-title">Sidecar Monitor</span>
     </span>
 
-    <span v-if="siteCount > 0" class="btn toolbar-site-count">
+    <span v-if="siteCount > 0" class="toolbar-badge">
       {{ siteCount }} 场地
     </span>
 
     <span v-if="failedCount > 0" class="badge-fail">
-      ⚠ {{ failedCount }} 异常
+      <AppIcon name="warning" :size="12" />
+      {{ failedCount }} 异常
     </span>
     <span v-else-if="siteCount > 8" class="toolbar-hint">
       多页面常驻，请关注内存
@@ -59,7 +61,7 @@ function onColsChange(e: Event) {
     <div class="toolbar-sep" />
 
     <label class="toolbar-columns">
-      列数
+      <span class="toolbar-columns-label">列数</span>
       <select
         :value="columns"
         class="toolbar-columns-select"
@@ -74,11 +76,18 @@ function onColsChange(e: Event) {
     <div class="toolbar-spacer" />
 
     <button v-if="isFocused" class="btn" title="退出聚焦" @click="emit('unfocus')">
-      ⊠ 退出聚焦
+      <AppIcon name="fullscreen-exit" :size="13" />
+      退出聚焦
     </button>
 
-    <button class="btn-icon" title="全部刷新" @click="emit('refreshAll')">⟳</button>
-    <button class="btn-icon" title="全屏" @click="emit('toggleFullscreen')">⛶</button>
-    <button class="btn-icon" title="设置" @click="emit('openSettings')">⚙</button>
+    <button class="btn-icon" title="全部刷新" @click="emit('refreshAll')">
+      <AppIcon name="refresh" :size="14" />
+    </button>
+    <button class="btn-icon" title="全屏" @click="emit('toggleFullscreen')">
+      <AppIcon name="fullscreen-enter" :size="14" />
+    </button>
+    <button class="btn-icon" title="设置" @click="emit('openSettings')">
+      <AppIcon name="settings" :size="14" />
+    </button>
   </header>
 </template>

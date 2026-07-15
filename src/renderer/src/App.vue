@@ -8,6 +8,9 @@ import AppToolbar from './components/AppToolbar.vue'
 import GridLayout from './components/GridLayout.vue'
 import StatusBar from './components/StatusBar.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
+import Toast from './components/Toast.vue'
+import AppIcon from './components/AppIcon.vue'
 
 const configStore = useConfigStore()
 const stateStore = useSiteStateStore()
@@ -15,10 +18,15 @@ const stateStore = useSiteStateStore()
 const gridAreaRef = ref<HTMLElement | null>(null)
 const focusedId = ref<string | null>(null)
 const showSettings = ref(false)
+const showConfirm = ref(false)
+const confirmBusy = ref(false)
+const settingsOverlayActive = ref(false)
+const toastVisible = ref(false)
+const toastMessage = ref('')
+const toastVariant = ref<'success' | 'error' | 'info'>('info')
 const metrics = ref({ siteCount: 0, failedCount: 0, memoryMB: 0 })
 const layoutColumns = ref(1)
 
-// Pending bounds flush (debounced via rAF)
 let rafId: number | null = null
 
 function scheduleBoundsFlush() {
@@ -69,7 +77,6 @@ function flushBounds() {
   window.monitorAPI.setBounds(bounds).catch(() => undefined)
 }
 
-// ResizeObserver
 let ro: ResizeObserver | null = null
 
 function setupResizeObserver() {
@@ -78,7 +85,6 @@ function setupResizeObserver() {
   ro.observe(gridAreaRef.value)
 }
 
-// IPC event cleanup functions
 let unsubState: (() => void) | null = null
 let unsubConfig: (() => void) | null = null
 let unsubMetrics: (() => void) | null = null
@@ -92,12 +98,8 @@ onMounted(async () => {
     stateStore.update(state)
   })
 
-  // CONFIG_CHANGED is sent for main-initiated changes (zoom, move).
-  // Do NOT call getSiteStates() here — that would cause a nested IPC invoke.
-  // New site states arrive via SITE_STATE_CHANGED as views load.
   unsubConfig = window.monitorAPI.onConfigChanged(cfg => {
     configStore.applyExternalUpdate(cfg)
-    // Prune state store: remove entries for sites that are no longer enabled.
     const enabledIds = new Set(cfg.sites.filter(s => s.enabled).map(s => s.id))
     stateStore.prune(enabledIds)
     nextTick(scheduleBoundsFlush)
@@ -120,7 +122,6 @@ onUnmounted(() => {
   if (rafId !== null) cancelAnimationFrame(rafId)
 })
 
-// Re-flush when config changes (column count, site list)
 watch(() => configStore.enabledSites, (sites) => {
   if (focusedId.value && !sites.some(site => site.id === focusedId.value)) {
     focusedId.value = null
@@ -129,10 +130,13 @@ watch(() => configStore.enabledSites, (sites) => {
   scheduleBoundsFlush()
 }, { deep: true })
 watch(() => configStore.config.columns, () => scheduleBoundsFlush())
-watch(showSettings, (visible) => {
-  window.monitorAPI.setSiteViewsVisible(!visible).catch(() => undefined)
-  if (!visible) nextTick(scheduleBoundsFlush)
-})
+watch(
+  () => showSettings.value || showConfirm.value || settingsOverlayActive.value,
+  (hidden) => {
+    window.monitorAPI.setSiteViewsVisible(!hidden).catch(() => undefined)
+    if (!hidden) nextTick(scheduleBoundsFlush)
+  },
+)
 
 async function handleFocus(id: string) {
   focusedId.value = id
@@ -147,14 +151,39 @@ async function handleUnfocus() {
 }
 
 async function handleRefreshAll() {
-  if (!confirm('刷新所有场地页面？')) return
-  await window.monitorAPI.refreshAll()
+  showConfirm.value = true
+}
+
+async function doRefreshAll() {
+  confirmBusy.value = true
+  try {
+    await window.monitorAPI.refreshAll()
+  } finally {
+    confirmBusy.value = false
+    showConfirm.value = false
+  }
+}
+
+function cancelRefreshAll() {
+  showConfirm.value = false
 }
 
 function handleToggleFullscreen() {
   window.monitorAPI.toggleFullscreen().catch(() => undefined)
 }
 
+function showToastMessage(message: string, variant: 'success' | 'error' | 'info' = 'info') {
+  toastMessage.value = message
+  toastVariant.value = variant
+  if (toastVisible.value) {
+    toastVisible.value = false
+    nextTick(() => {
+      toastVisible.value = true
+    })
+    return
+  }
+  toastVisible.value = true
+}
 </script>
 
 <template>
@@ -182,8 +211,11 @@ function handleToggleFullscreen() {
         @unfocus="handleUnfocus"
       />
       <div v-else class="empty-state">
-        <div class="empty-state-icon">🖥</div>
-        <div>暂无场地，点击右上角⚙ 添加</div>
+        <div class="empty-state-icon">
+          <AppIcon name="monitor" :size="48" />
+        </div>
+        <div class="empty-state-title">暂无场地</div>
+        <div class="empty-state-hint">点击右上角设置图标添加场地</div>
       </div>
     </div>
 
@@ -192,6 +224,25 @@ function handleToggleFullscreen() {
     <SettingsDrawer
       v-if="showSettings"
       @close="showSettings = false"
+      @overlay-changed="active => settingsOverlayActive = active"
+      @toast="(msg, variant) => showToastMessage(msg, variant)"
+    />
+
+    <ConfirmDialog
+      v-if="showConfirm"
+      title="刷新所有场地"
+      message="刷新所有场地页面？"
+      confirm-label="刷新"
+      :busy="confirmBusy"
+      @confirm="doRefreshAll"
+      @cancel="cancelRefreshAll"
+    />
+
+    <Toast
+      :visible="toastVisible"
+      :message="toastMessage"
+      :variant="toastVariant"
+      @dismiss="toastVisible = false"
     />
   </div>
 </template>

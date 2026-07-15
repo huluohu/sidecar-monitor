@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SiteConfig, SiteState } from '@shared/types'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{
   sites: SiteConfig[]
@@ -23,7 +24,7 @@ const api = window.monitorAPI
  */
 const cols = computed(() => Math.max(1, props.effectiveCols))
 const rows = computed(() =>
-  props.focusedId ? 1 : Math.max(1, Math.ceil(props.sites.length / cols.value))
+  props.focusedId ? 1 : Math.max(1, Math.ceil(props.sites.length / cols.value)),
 )
 
 function stateOf(id: string): SiteState | undefined {
@@ -32,17 +33,12 @@ function stateOf(id: string): SiteState | undefined {
 </script>
 
 <template>
-  <!-- CSS grid drives the visual cell layout.
-       Each cell height includes the title bar (--cell-title-h) + a placeholder body.
-       The actual content is rendered by WebContentsViews positioned by the main process. -->
   <div
     class="grid-css"
     :style="{
       display: 'grid',
       gridTemplateColumns: `repeat(${cols}, 1fr)`,
       gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-      width: '100%',
-      height: '100%',
     }"
   >
     <div
@@ -50,9 +46,11 @@ function stateOf(id: string): SiteState | undefined {
       :key="site.id"
       :data-site-id="site.id"
       class="grid-cell"
-      :style="focusedId && focusedId !== site.id ? { display: 'none' } : {}"
+      :class="{
+        'grid-cell--hidden': focusedId && focusedId !== site.id,
+        'grid-cell--focused': focusedId === site.id,
+      }"
     >
-      <!-- Title bar — rendered by Vue, visible above WebContentsView -->
       <div class="cell-title">
         <span
           class="cell-status-dot"
@@ -65,61 +63,83 @@ function stateOf(id: string): SiteState | undefined {
             class="cell-btn"
             title="后退"
             @click="api.goBack(site.id)"
-          >←</button>
+          >
+            <AppIcon name="arrow-left" :size="12" />
+          </button>
 
           <button
             class="cell-btn"
             title="刷新"
             @click="api.refreshSite(site.id)"
-          >⟳</button>
+          >
+            <AppIcon name="refresh" :size="12" />
+          </button>
 
           <button
             v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed'"
-            class="cell-btn"
+            class="cell-btn cell-btn--danger"
             title="恢复"
-            style="color: var(--color-failed)"
             @click="api.recoverSite(site.id)"
-          >↺</button>
+          >
+            <AppIcon name="recover" :size="12" />
+          </button>
 
           <button
             class="cell-btn"
             title="缩小"
             @click="api.setSiteZoom(site.id, Math.max(0.1, site.zoomFactor - 0.1))"
-          >−</button>
+          >
+            <AppIcon name="zoom-out" :size="12" />
+          </button>
 
           <button
             class="cell-btn"
             title="放大"
             @click="api.setSiteZoom(site.id, Math.min(5, site.zoomFactor + 0.1))"
-          >＋</button>
+          >
+            <AppIcon name="zoom-in" :size="12" />
+          </button>
 
           <button
             v-if="focusedId === site.id"
             class="cell-btn"
             title="退出聚焦"
             @click="emit('unfocus')"
-          >✕</button>
+          >
+            <AppIcon name="close" :size="12" />
+          </button>
           <button
             v-else
             class="cell-btn"
             title="聚焦此场地"
             @click="emit('focus', site.id)"
-          >⊡</button>
+          >
+            <AppIcon name="maximize" :size="12" />
+          </button>
         </div>
       </div>
 
-      <!-- Body placeholder — WebContentsView is placed here by main process -->
       <div class="cell-body">
-        <!-- Show overlay only for non-ready states -->
         <div
           class="cell-overlay"
           :class="{ hidden: stateOf(site.id)?.status === 'ready' }"
         >
           <div class="cell-overlay-icon">
-            <template v-if="stateOf(site.id)?.status === 'loading'">⏳</template>
-            <template v-else-if="stateOf(site.id)?.status === 'failed'">⚠</template>
-            <template v-else-if="stateOf(site.id)?.status === 'crashed'">💥</template>
-            <template v-else>⏳</template>
+            <AppIcon
+              v-if="stateOf(site.id)?.status === 'failed'"
+              name="warning"
+              :size="28"
+            />
+            <AppIcon
+              v-else-if="stateOf(site.id)?.status === 'crashed'"
+              name="crashed"
+              :size="28"
+            />
+            <AppIcon
+              v-else
+              name="loading"
+              :size="28"
+            />
           </div>
           <div class="cell-overlay-msg">
             <template v-if="stateOf(site.id)?.status === 'loading'">加载中…</template>
@@ -132,8 +152,7 @@ function stateOf(id: string): SiteState | undefined {
           >{{ stateOf(site.id)?.failReason }}</div>
           <button
             v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed'"
-            class="btn"
-            style="margin-top:6px;"
+            class="btn cell-overlay-action"
             @click="api.recoverSite(site.id)"
           >重试</button>
         </div>

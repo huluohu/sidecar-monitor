@@ -1,7 +1,6 @@
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
@@ -9,7 +8,8 @@ import { _electron as electron } from 'playwright'
 const require = createRequire(import.meta.url)
 const electronPath = require('electron')
 const projectDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const userDataDir = mkdtempSync(join(tmpdir(), 'sidecar-monitor-smoke-'))
+const userDataDir = join(projectDir, `.electron-smoke-user-data-${process.pid}-${Date.now()}`)
+mkdirSync(userDataDir, { recursive: true })
 
 const server = createServer((_req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
@@ -57,6 +57,16 @@ try {
   })
 
   const page = await electronApp.firstWindow()
+  const pageTitle = await page.title()
+  if (pageTitle !== 'Sidecar Monitor') {
+    throw new Error(`Expected page title 'Sidecar Monitor', got '${pageTitle}'`)
+  }
+
+  const toolbarTitle = await page.locator('.toolbar-title').textContent()
+  if (!toolbarTitle?.includes('Sidecar Monitor')) {
+    throw new Error(`Expected toolbar title to include 'Sidecar Monitor', got '${toolbarTitle}'`)
+  }
+
   const runtimePlatform = await page.evaluate(() => window.monitorAPI.platform)
   const toolbarLogoCount = await page.locator('.toolbar-logo').count()
   const expectedToolbarLogoCount = runtimePlatform === 'darwin' ? 1 : 0
@@ -115,7 +125,7 @@ try {
   await page.locator('button[title="设置"]').click()
 
   for (let index = 1; index <= 5; index++) {
-    await page.getByRole('button', { name: '+ 添加' }).click()
+    await page.getByRole('button', { name: '添加' }).click()
     const modal = page.locator('.modal')
     await modal.locator('input[type="text"]').fill(`Site ${index}`)
     await modal.locator('input[type="url"]').fill(
@@ -155,6 +165,12 @@ try {
   if (metrics.siteCount !== 5) {
     throw new Error(`Expected 5 live site views, received ${metrics.siteCount}`)
   }
+
+  await page.locator('button[title="全部刷新"]').click()
+  const confirmModal = page.locator('.confirm-modal')
+  await confirmModal.waitFor({ state: 'visible', timeout: 3_000 })
+  await confirmModal.getByRole('button', { name: '取消' }).click()
+  await confirmModal.waitFor({ state: 'detached', timeout: 3_000 })
 
   console.log('Electron smoke passed: 5 consecutive sites saved and reconciled')
 } finally {
