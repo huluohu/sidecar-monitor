@@ -1,15 +1,15 @@
 /**
  * Unit tests for the pure parsing helpers in scripts/verify-package.mjs.
  *
- * The helpers are replicated inline (matching the source exactly) so that
- * these tests work without any ESM import workarounds.  Integration checks
- * against locally present artifacts run only when the relevant files exist.
+ * Pure helpers live in a side-effect-free ESM module so Windows does not need
+ * to import the executable CLI validator. Integration checks against locally
+ * present artifacts run only when the relevant files exist.
  */
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseDesktopEntry, parsePlistKey } from '../scripts/verify-package.mjs'
+import { parseDesktopEntry, parsePlistKey } from '../scripts/package-parsers.mjs'
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..')
 const RELEASE = resolve(ROOT, 'release')

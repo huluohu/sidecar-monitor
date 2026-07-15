@@ -10,6 +10,10 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } fr
 import { spawnSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { parseDesktopEntry, parsePlistKey } from './package-parsers.mjs'
+import { extractRpmArchive } from './process-pipeline.mjs'
+
+export { parseDesktopEntry, parsePlistKey } from './package-parsers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
@@ -20,42 +24,6 @@ const WORK_DIR = resolve(ROOT, '.verify-work')
 process.on('exit', () => {
   if (existsSync(WORK_DIR)) rmSync(WORK_DIR, { recursive: true, force: true })
 })
-
-// ── Pure parsing helpers (exported for unit tests) ──────────────────────────
-
-/**
- * Parse a macOS property list XML string and return the string value for the
- * given key, or null if the key is absent.
- *
- * Handles the canonical plist layout produced by electron-builder:
- *   <key>SomeKey</key>\n  <string>value</string>
- */
-export function parsePlistKey(xml, key) {
-  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const re = new RegExp(`<key>${esc}<\\/key>\\s*<string>([^<]+)<\\/string>`)
-  const m = xml.match(re)
-  return m ? m[1].trim() : null
-}
-
-/**
- * Parse a FreeDesktop .desktop entry text and return a key→value map.
- * Only key=value lines outside section headers are included; the first
- * occurrence of each key wins (standard behaviour for duplicate keys).
- */
-export function parseDesktopEntry(text) {
-  /** @type {Record<string, string>} */
-  const result = {}
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim()
-    if (!line || line.startsWith('#') || line.startsWith('[')) continue
-    const eq = line.indexOf('=')
-    if (eq < 1) continue
-    const k = line.slice(0, eq).trim()
-    const v = line.slice(eq + 1).trim()
-    if (!(k in result)) result[k] = v
-  }
-  return result
-}
 
 // ── Internal utilities ───────────────────────────────────────────────────────
 
@@ -255,7 +223,7 @@ function checkDebPackage(debPath) {
   checkHicolorIcons(workDir, 'deb')
 }
 
-function checkRpmPackage(rpmPath) {
+async function checkRpmPackage(rpmPath) {
   console.log(`\n  Checking .rpm: ${rpmPath}`)
 
   // Validate content list first (fast, no extraction)
@@ -274,18 +242,10 @@ function checkRpmPackage(rpmPath) {
 
   // Extract and verify actual desktop content + PNG byte signatures
   const workDir = makeTempDir('rpm')
-  const r2c = spawnSync('rpm2cpio', [rpmPath], { maxBuffer: 256 * 1024 * 1024 })
-  if (r2c.status !== 0) {
-    fail(`rpm2cpio failed: ${r2c.stderr?.toString() || r2c.stdout?.toString()}`)
-  }
-  const cpio = spawnSync('cpio', ['-idm', '--quiet'], {
-    cwd: workDir,
-    input: r2c.stdout,
-    maxBuffer: 256 * 1024 * 1024,
-    encoding: 'utf8',
-  })
-  if (cpio.status !== 0) {
-    fail(`cpio extraction failed: ${cpio.stderr || cpio.stdout}`)
+  try {
+    await extractRpmArchive(rpmPath, workDir)
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error))
   }
 
   const desktopFiles = collectFiles(workDir, '.desktop')
@@ -345,7 +305,7 @@ function checkAppImage(appImagePath) {
 
 // ── Linux top-level validation ───────────────────────────────────────────────
 
-function validateLinux() {
+async function validateLinux() {
   console.log('\n── Linux package validation ──')
 
   const debs = requireArtifact(RELEASE, (f) => f.endsWith('.deb'), 'DEB')
@@ -353,7 +313,7 @@ function validateLinux() {
   const appImages = requireArtifact(RELEASE, (f) => f.endsWith('.AppImage'), 'AppImage')
 
   for (const deb of debs) checkDebPackage(deb)
-  for (const rpm of rpms) checkRpmPackage(rpm)
+  for (const rpm of rpms) await checkRpmPackage(rpm)
   for (const ai of appImages) checkAppImage(ai)
 
   console.log('\n✅  Linux validation passed\n')
@@ -380,7 +340,7 @@ if (isDirectExecution) {
       validateWin()
       break
     case 'linux':
-      validateLinux()
+      await validateLinux()
       break
     default:
       console.error(`Unknown platform: "${platform}". Expected: mac, win, linux`)
