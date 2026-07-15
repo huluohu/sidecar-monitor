@@ -6,6 +6,34 @@
 
 `Sidecar Monitor` 在一个桌面窗口内同时显示多个 OpenTCS Sidecar 场地页面，支持会话隔离、配置持久化、聚焦模式和跨平台打包。
 
+## 界面预览
+
+以下画面使用本地模拟数据，不包含真实站点、账号或凭证。
+
+### 多场地总览
+
+![Sidecar Monitor 多场地监控总览](docs/screenshots/overview.png)
+
+四个场地以双列网格同时展示，顶部可快速调整列数、刷新页面、切换全屏或打开设置。
+
+### 场地设置
+
+![Sidecar Monitor 场地设置抽屉](docs/screenshots/settings.png)
+
+在设置抽屉中管理场地启用状态、顺序、登录数据及配置导入导出。
+
+### 异常恢复
+
+![Sidecar Monitor 页面加载失败与恢复界面](docs/screenshots/recovery.png)
+
+页面加载失败或超时时会显示明确原因，并提供重试和恢复入口。
+
+### macOS 原生菜单
+
+![Sidecar Monitor macOS 原生 View 菜单](docs/screenshots/native-menu-macos.png)
+
+macOS 使用原生菜单和快捷键；Windows 与 Linux 提供同等功能，并遵循各自平台的菜单惯例。
+
 ## 开发
 
 **前置要求：** Node.js 20.19+（推荐 22.12+），npm 10+
