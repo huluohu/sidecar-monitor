@@ -26,6 +26,8 @@ const COLUMN_OPTIONS = [
 ]
 
 const isMacOS = window.monitorAPI.platform === 'darwin'
+const usesWindowControlsOverlay =
+  window.monitorAPI.platform === 'win32' || window.monitorAPI.platform === 'linux'
 
 function onColsChange(e: Event) {
   const val = (e.target as HTMLSelectElement).value
@@ -34,7 +36,13 @@ function onColsChange(e: Event) {
 </script>
 
 <template>
-  <header class="toolbar">
+  <header
+    class="toolbar"
+    :class="{
+      'toolbar--macos': isMacOS,
+      'toolbar--window-overlay': usesWindowControlsOverlay,
+    }"
+  >
     <span class="toolbar-brand">
       <img
         v-if="isMacOS"

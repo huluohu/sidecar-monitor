@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/types'
-import type { AppConfig, SiteState, SlotBounds, AppMetrics } from '@shared/types'
+import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand } from '@shared/types'
 
 /** Minimal API exposed to the trusted renderer via contextBridge. */
 const monitorAPI = {
@@ -78,6 +78,12 @@ const monitorAPI = {
     const handler = (_e: unknown, metrics: AppMetrics) => cb(metrics)
     ipcRenderer.on(IPC.METRICS_UPDATE, handler)
     return () => ipcRenderer.off(IPC.METRICS_UPDATE, handler)
+  },
+
+  onMenuCommand: (cb: (cmd: MenuCommand) => void): (() => void) => {
+    const handler = (_e: unknown, cmd: MenuCommand) => cb(cmd)
+    ipcRenderer.on(IPC.MENU_COMMAND, handler)
+    return () => ipcRenderer.off(IPC.MENU_COMMAND, handler)
   },
 }
 

@@ -21,6 +21,8 @@ const emit = defineEmits<{
   close: []
   overlayChanged: [active: boolean]
   toast: [message: string, variant: 'success' | 'error' | 'info']
+  importConfig: []
+  exportConfig: []
 }>()
 const configStore = useConfigStore()
 
@@ -108,24 +110,11 @@ async function onSaveSite(site: SiteConfig) {
 }
 
 async function importConfig() {
-  try {
-    const imported = await window.monitorAPI.importConfig()
-    if (imported) {
-      await configStore.save(imported)
-      emit('toast', '配置已导入', 'success')
-    }
-  } catch (error) {
-    emit('toast', `导入失败：${error instanceof Error ? error.message : String(error)}`, 'error')
-  }
+  emit('importConfig')
 }
 
 async function exportConfig() {
-  try {
-    await window.monitorAPI.exportConfig()
-    emit('toast', '配置已导出', 'success')
-  } catch (error) {
-    emit('toast', `导出失败：${error instanceof Error ? error.message : String(error)}`, 'error')
-  }
+  emit('exportConfig')
 }
 
 async function handleConfirm() {

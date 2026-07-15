@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isHttpUrl, isSameOrigin, classifyNavigation } from '../src/shared/urlPolicy'
+import { isHttpUrl, isSameOrigin, classifyNavigation, getOrigin } from '../src/shared/urlPolicy'
 
 describe('isHttpUrl', () => {
   it('accepts http/https', () => {
@@ -30,6 +30,32 @@ describe('isSameOrigin', () => {
 
   it('handles malformed URLs gracefully', () => {
     expect(isSameOrigin('not-a-url', 'https://a.com')).toBe(false)
+  })
+})
+
+describe('getOrigin', () => {
+  it('extracts origin from http/https URLs', () => {
+    expect(getOrigin('https://app.example.com/dashboard')).toBe('https://app.example.com')
+    expect(getOrigin('http://site.local:8080/path')).toBe('http://site.local:8080')
+    expect(getOrigin('https://example.com')).toBe('https://example.com')
+  })
+
+  it('returns empty string for non-http(s) protocols', () => {
+    expect(getOrigin('file:///etc/passwd')).toBe('')
+    expect(getOrigin('javascript:void(0)')).toBe('')
+    expect(getOrigin('data:text/html,x')).toBe('')
+    expect(getOrigin('blob:null/id')).toBe('')
+  })
+
+  it('returns empty string for malformed URLs', () => {
+    expect(getOrigin('')).toBe('')
+    expect(getOrigin('not-a-url')).toBe('')
+  })
+
+  it('origin string is itself a valid origin (round-trips through isSameOrigin)', () => {
+    const origin = getOrigin('https://app.example.com/dashboard')
+    expect(isSameOrigin('https://app.example.com/login', origin)).toBe(true)
+    expect(isSameOrigin('https://other.com/', origin)).toBe(false)
   })
 })
 

@@ -37,7 +37,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
   const failedCount = computed(() => {
     let n = 0
     for (const s of statesMap.value.values()) {
-      if (s.status === 'failed' || s.status === 'crashed') n++
+      if (s.status === 'failed' || s.status === 'crashed' || s.status === 'unresponsive') n++
     }
     return n
   })

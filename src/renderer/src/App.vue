@@ -88,6 +88,7 @@ function setupResizeObserver() {
 let unsubState: (() => void) | null = null
 let unsubConfig: (() => void) | null = null
 let unsubMetrics: (() => void) | null = null
+let unsubMenu: (() => void) | null = null
 
 onMounted(async () => {
   await configStore.load()
@@ -109,6 +110,34 @@ onMounted(async () => {
     metrics.value = m
   })
 
+  unsubMenu = window.monitorAPI.onMenuCommand(cmd => {
+    switch (cmd.type) {
+      case 'open-settings':
+        showSettings.value = true
+        break
+      case 'import-config':
+        handleImportConfig()
+        break
+      case 'export-config':
+        handleExportConfig()
+        break
+      case 'refresh-all':
+        handleRefreshAll()
+        break
+      case 'toggle-fullscreen':
+        handleToggleFullscreen()
+        break
+      case 'set-columns':
+        configStore.setColumns(cmd.columns).catch(error => {
+          showToastMessage(
+            `布局更新失败：${error instanceof Error ? error.message : String(error)}`,
+            'error',
+          )
+        })
+        break
+    }
+  })
+
   await nextTick()
   setupResizeObserver()
   scheduleBoundsFlush()
@@ -119,6 +148,7 @@ onUnmounted(() => {
   unsubState?.()
   unsubConfig?.()
   unsubMetrics?.()
+  unsubMenu?.()
   if (rafId !== null) cancelAnimationFrame(rafId)
 })
 
@@ -184,6 +214,27 @@ function showToastMessage(message: string, variant: 'success' | 'error' | 'info'
   }
   toastVisible.value = true
 }
+
+async function handleImportConfig() {
+  try {
+    const imported = await window.monitorAPI.importConfig()
+    if (imported) {
+      await configStore.save(imported)
+      showToastMessage('配置已导入', 'success')
+    }
+  } catch (error) {
+    showToastMessage(`导入失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+  }
+}
+
+async function handleExportConfig() {
+  try {
+    await window.monitorAPI.exportConfig()
+    showToastMessage('配置已导出', 'success')
+  } catch (error) {
+    showToastMessage(`导出失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+  }
+}
 </script>
 
 <template>
@@ -226,6 +277,8 @@ function showToastMessage(message: string, variant: 'success' | 'error' | 'info'
       @close="showSettings = false"
       @overlay-changed="active => settingsOverlayActive = active"
       @toast="(msg, variant) => showToastMessage(msg, variant)"
+      @import-config="handleImportConfig"
+      @export-config="handleExportConfig"
     />
 
     <ConfirmDialog

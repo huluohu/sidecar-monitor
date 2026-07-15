@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { AppConfig, SiteState, SlotBounds, AppMetrics } from '@shared/types'
+import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand } from '@shared/types'
 
 export interface MonitorAPI {
   platform: NodeJS.Platform
@@ -24,6 +24,7 @@ export interface MonitorAPI {
   onSiteStateChanged: (cb: (state: SiteState) => void) => () => void
   onConfigChanged: (cb: (config: AppConfig) => void) => () => void
   onMetricsUpdate: (cb: (metrics: AppMetrics) => void) => () => void
+  onMenuCommand: (cb: (cmd: MenuCommand) => void) => () => void
 }
 
 declare global {

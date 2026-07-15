@@ -1,12 +1,47 @@
-import { WebContentsView, session, BrowserWindow } from 'electron'
+import { WebContentsView, session, BrowserWindow, app } from 'electron'
 import type { AppConfig, SiteConfig, SiteState, SlotBounds } from '@shared/types'
 import { applyNavigationPolicy, applySessionPolicy } from './navigationPolicy'
 import { ReconcileQueue } from './reconcileQueue'
+import { loadScheduler } from './loadScheduler'
+import type { LoadToken } from './loadScheduler'
+import { toSiteUserAgent } from '@shared/userAgent'
+
+/**
+ * Returns the effective load-timeout in milliseconds.
+ *
+ * Packaged builds always use the production default of 30 000 ms.
+ * In unpackaged (dev/test) builds, the env var
+ * SIDECAR_MONITOR_TEST_LOAD_TIMEOUT_MS may override the value.
+ * Invalid or out-of-bounds values silently fall back to 30 000.
+ *
+ * Accepted range: 100 – 60 000 ms (inclusive).
+ */
+function resolveLoadTimeoutMs(): number {
+  if (!app.isPackaged) {
+    const raw = process.env['SIDECAR_MONITOR_TEST_LOAD_TIMEOUT_MS']
+    if (raw !== undefined && raw !== '') {
+      const n = Number(raw)
+      if (Number.isFinite(n) && n >= 100 && n <= 60_000) return n
+    }
+  }
+  return 30_000
+}
+
+const LOAD_TIMEOUT_MS = resolveLoadTimeoutMs()
 
 interface ManagedSite {
   config: SiteConfig
   view: WebContentsView
   state: SiteState
+  /** Non-null while the entry is waiting in the scheduler queue (not yet running). */
+  loadToken: LoadToken | null
+  /** True once the scheduler has called the load function (loadURL is running). */
+  loadActive: boolean
+  loadTimeoutHandle: ReturnType<typeof setTimeout> | null
+  /** Set to true when a load timeout fires; guards against subsequent event overwrites. */
+  timedOut: boolean
+  /** Set to true in destroySite to guard post-destroy event handlers. */
+  destroyed: boolean
 }
 
 interface ReconcileRequest {
@@ -168,36 +203,85 @@ class SiteViewManager {
       title: config.name,
       canGoBack: false,
     }
-    const managed: ManagedSite = { config, view, state }
+    const managed: ManagedSite = {
+      config,
+      view,
+      state,
+      loadToken: null,
+      loadActive: false,
+      loadTimeoutHandle: null,
+      timedOut: false,
+      destroyed: false,
+    }
     this.sites.set(config.id, managed)
-
     if (this.window) {
       this.window.contentView.addChildView(view)
     }
 
     const wc = view.webContents
+    wc.setUserAgent(toSiteUserAgent(wc.getUserAgent()))
     applyNavigationPolicy(wc, config.url)
     applySessionPolicy(wc)
-
     wc.setZoomFactor(config.zoomFactor)
 
-    wc.on('did-start-loading', () => {
-      managed.state.status = 'loading'
-      this.scheduleVisibility()
-      this.emit(config.id)
-    })
-
-    wc.on('did-finish-load', () => {
+    const markReady = (): void => {
+      if (managed.destroyed) return
+      if (managed.loadTimeoutHandle !== null) {
+        clearTimeout(managed.loadTimeoutHandle)
+        managed.loadTimeoutHandle = null
+      }
+      managed.timedOut = false
       managed.state.status = 'ready'
       managed.state.canGoBack = wc.canGoBack()
       managed.state.failReason = undefined
       this.scheduleVisibility()
       this.emit(config.id)
+    }
+
+    let releaseInitialLoad: (() => void) | null = null
+
+    wc.on('did-start-navigation', details => {
+      if (!details.isMainFrame || details.isSameDocument || managed.destroyed) return
+      if (managed.loadTimeoutHandle !== null) {
+        clearTimeout(managed.loadTimeoutHandle)
+      }
+      managed.timedOut = false
+      managed.loadTimeoutHandle = setTimeout(() => {
+        managed.loadTimeoutHandle = null
+        if (managed.destroyed) return
+        managed.timedOut = true
+        try { wc.stop() } catch { /* view may already be closed */ }
+        managed.state.status = 'failed'
+        managed.state.failReason = '加载超时（30 秒）'
+        this.scheduleVisibility()
+        this.emit(config.id)
+      }, LOAD_TIMEOUT_MS)
+      managed.state.status = 'loading'
+      this.scheduleVisibility()
+      this.emit(config.id)
+    })
+
+    // A usable document may reach DOM ready even when optional third-party
+    // resources remain pending indefinitely.
+    wc.on('dom-ready', () => {
+      markReady()
+      releaseInitialLoad?.()
+    })
+
+    wc.on('did-finish-load', () => {
+      markReady()
+      releaseInitialLoad?.()
     })
 
     wc.on('did-fail-load', (_ev, errorCode, errorDesc, _url, isMainFrame) => {
       if (!isMainFrame) return
-      if (errorCode === -3) return // ERR_ABORTED — navigation was programmatically stopped
+      if (errorCode === -3) return // ERR_ABORTED — e.g. after wc.stop() or timeout
+      if (managed.destroyed) return
+      if (managed.timedOut) return // timeout already set the state; don't overwrite
+      if (managed.loadTimeoutHandle !== null) {
+        clearTimeout(managed.loadTimeoutHandle)
+        managed.loadTimeoutHandle = null
+      }
       managed.state.status = 'failed'
       managed.state.failReason = errorDesc
       this.scheduleVisibility()
@@ -205,42 +289,115 @@ class SiteViewManager {
     })
 
     wc.on('page-title-updated', (_ev, title) => {
+      if (managed.destroyed) return
       managed.state.title = title || config.name
       this.emit(config.id)
     })
 
     wc.on('render-process-gone', (_ev, details) => {
+      if (managed.destroyed) return
       console.warn(`[SiteViewManager] render-process-gone: ${config.id}`, details.reason)
+      if (managed.loadTimeoutHandle !== null) {
+        clearTimeout(managed.loadTimeoutHandle)
+        managed.loadTimeoutHandle = null
+      }
       managed.state.status = 'crashed'
       managed.state.failReason = details.reason
       this.scheduleVisibility()
       this.emit(config.id)
     })
 
-    wc.loadURL(config.url).catch((error: unknown) => {
-      const code =
-        typeof error === 'object' && error && 'code' in error
-          ? String((error as { code: unknown }).code)
-          : 'LOAD_FAILED'
-      console.error(`[SiteViewManager] loadURL failed for ${config.id}: ${code}`)
+    wc.on('unresponsive', () => {
+      if (managed.destroyed) return
+      managed.state.status = 'unresponsive'
+      this.scheduleVisibility()
+      this.emit(config.id)
     })
 
-    // Schedule visibility AFTER loadURL so setVisible is not called in the
-    // same synchronous stack as WebContentsView construction.
+    wc.on('responsive', () => {
+      if (managed.destroyed) return
+      if (managed.state.status === 'unresponsive') {
+        managed.state.status = 'ready'
+        managed.state.failReason = undefined
+        this.scheduleVisibility()
+        this.emit(config.id)
+      }
+    })
+
+    // Schedule the loadURL call through the FIFO concurrency-limited scheduler.
+    // The view is created and added to the window now; loadURL begins only when
+    // a scheduler slot is available.
+    managed.loadToken = loadScheduler.schedule(config.id, async () => {
+      managed.loadActive = true
+      managed.loadToken = null // no longer queued
+      const domReadyPromise = new Promise<void>(resolve => {
+        releaseInitialLoad = resolve
+      })
+      const loadPromise = wc.loadURL(config.url).catch((err: unknown) => {
+        // did-fail-load handles state updates in most cases.
+        // Fallback: set failed state if nothing else handled it yet.
+        if (!managed.destroyed && !managed.timedOut) {
+          const code =
+            typeof err === 'object' && err !== null && 'code' in err
+              ? String((err as { code: unknown }).code)
+              : ''
+          if (code !== 'ERR_ABORTED') {
+            if (
+              managed.state.status !== 'failed' &&
+              managed.state.status !== 'crashed' &&
+              managed.state.status !== 'unresponsive'
+            ) {
+              managed.state.status = 'failed'
+              managed.state.failReason = code || String(err)
+              this.scheduleVisibility()
+              this.emit(config.id)
+            }
+          }
+        }
+      })
+      try {
+        await Promise.race([loadPromise, domReadyPromise])
+      } finally {
+        managed.loadActive = false
+        releaseInitialLoad = null
+      }
+    })
+
+    // Schedule visibility AFTER scheduling the load so setVisible is not called
+    // in the same synchronous stack as WebContentsView construction.
     this.scheduleVisibility()
   }
 
   private destroySite(id: string): void {
     const m = this.sites.get(id)
     if (!m) return
+
+    m.destroyed = true
+
+    // Cancel from scheduler queue if the load hasn't started yet.
+    loadScheduler.cancelById(id)
+
+    // Clear the load timeout.
+    if (m.loadTimeoutHandle !== null) {
+      clearTimeout(m.loadTimeoutHandle)
+      m.loadTimeoutHandle = null
+    }
+
+    // If loadURL is running, stop it so the promise settles and the
+    // scheduler slot is released automatically via the finally handler.
+    if (m.loadActive) {
+      try { m.view.webContents.stop() } catch { /* view may already be closed */ }
+    }
+
     if (this.window) {
       try {
         this.window.contentView.removeChildView(m.view)
-      } catch {}
+      } catch { /* may already be removed */ }
     }
     try {
       ;(m.view.webContents as { close?: () => void }).close?.()
-    } catch {}
+    } catch { /* ignore */ }
+
     this.sites.delete(id)
     this.lastBounds.delete(id)
   }
@@ -293,8 +450,9 @@ class SiteViewManager {
   private _applyVisibility(): void {
     for (const [id, managed] of this.sites) {
       if (!this.sites.has(id)) continue // destroyed while setImmediate was pending
+      const { status } = managed.state
       const isHealthy =
-        managed.state.status !== 'failed' && managed.state.status !== 'crashed'
+        status !== 'failed' && status !== 'crashed' && status !== 'unresponsive'
       const isFocused = this.focusedId === null || this.focusedId === id
       try {
         managed.view.setVisible(this.globallyVisible && isHealthy && isFocused)
@@ -321,7 +479,7 @@ class SiteViewManager {
   recover(id: string): void {
     const m = this.sites.get(id)
     if (!m) return
-    if (m.state.status === 'crashed') {
+    if (m.state.status === 'crashed' || m.state.status === 'unresponsive') {
       const config = { ...m.config }
       const savedBounds = this.lastBounds.get(id)
       this.destroySite(id)

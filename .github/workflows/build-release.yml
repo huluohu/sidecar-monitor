@@ -19,20 +19,24 @@ jobs:
         include:
           - name: macOS
             os: macos-14
-            script: dist:mac
+            builderArgs: '--mac'
             artifact: sidecar-monitor-macos
+            verifyPlatform: mac
           - name: Windows
             os: windows-2022
-            script: dist:win
+            builderArgs: '--win'
             artifact: sidecar-monitor-windows
+            verifyPlatform: win
           - name: Linux x64
             os: ubuntu-24.04
-            script: dist:linux
+            builderArgs: '--linux'
             artifact: sidecar-monitor-linux-x64
+            verifyPlatform: linux
           - name: Linux arm64
             os: ubuntu-24.04-arm
-            script: dist:linux
+            builderArgs: '--linux'
             artifact: sidecar-monitor-linux-arm64
+            verifyPlatform: linux
 
     steps:
       - name: Check out repository
@@ -49,18 +53,35 @@ jobs:
 
       - name: Install Linux packaging tools
         if: startsWith(matrix.name, 'Linux')
-        run: sudo apt-get update && sudo apt-get install --yes rpm
+        run: sudo apt-get update && sudo apt-get install --yes cpio rpm xvfb squashfs-tools
 
       - name: Type check
         run: npm run typecheck
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm test
 
+      - name: Build application
+        run: npm run build
+
+      - name: Run Electron smoke tests (Linux)
+        if: startsWith(matrix.name, 'Linux')
+        run: xvfb-run --auto-servernum -- node tests/electron-smoke.mjs
+
+      - name: Run Electron smoke tests
+        if: "!startsWith(matrix.name, 'Linux')"
+        run: node tests/electron-smoke.mjs
+
+      - name: Clean release directory
+        run: npm run clean:release
+
       - name: Package application
-        run: npm run ${{ matrix.script }}
+        run: npx electron-builder ${{ matrix.builderArgs }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Validate package assets
+        run: node scripts/verify-package.mjs ${{ matrix.verifyPlatform }}
 
       - name: Upload packages
         uses: actions/upload-artifact@v4

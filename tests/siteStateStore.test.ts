@@ -71,6 +71,28 @@ describe('siteStateStore.failedCount', () => {
     expect(store.failedCount).toBe(2)
   })
 
+  it('counts unresponsive as abnormal', () => {
+    const store = useSiteStateStore()
+    store.setAll([
+      { id: 'a', status: 'ready', title: 'A', canGoBack: false },
+      { id: 'b', status: 'unresponsive', title: 'B', canGoBack: false },
+      { id: 'c', status: 'failed', title: 'C', canGoBack: false },
+      { id: 'd', status: 'loading', title: 'D', canGoBack: false },
+    ])
+    expect(store.failedCount).toBe(2)
+  })
+
+  it('counts failed, crashed, and unresponsive together', () => {
+    const store = useSiteStateStore()
+    store.setAll([
+      { id: 'a', status: 'failed', title: 'A', canGoBack: false },
+      { id: 'b', status: 'crashed', title: 'B', canGoBack: false },
+      { id: 'c', status: 'unresponsive', title: 'C', canGoBack: false },
+      { id: 'd', status: 'ready', title: 'D', canGoBack: false },
+    ])
+    expect(store.failedCount).toBe(3)
+  })
+
   it('updates after prune', () => {
     const store = useSiteStateStore()
     store.setAll([

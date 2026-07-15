@@ -1,6 +1,6 @@
 // Types shared between main, preload, and renderer
 
-export type SiteStatus = 'loading' | 'ready' | 'failed' | 'crashed'
+export type SiteStatus = 'loading' | 'ready' | 'failed' | 'crashed' | 'unresponsive'
 
 export interface SiteConfig {
   id: string
@@ -40,6 +40,15 @@ export interface AppMetrics {
   memoryMB: number
 }
 
+// Commands sent from the native menu (main) to the renderer.
+export type MenuCommand =
+  | { type: 'open-settings' }
+  | { type: 'import-config' }
+  | { type: 'export-config' }
+  | { type: 'refresh-all' }
+  | { type: 'toggle-fullscreen' }
+  | { type: 'set-columns'; columns: number | 'auto' }
+
 export const IPC = {
   // renderer → main (invoke)
   CONFIG_GET: 'config:get',
@@ -63,4 +72,5 @@ export const IPC = {
   SITE_STATE_CHANGED: 'site-state-changed',
   CONFIG_CHANGED: 'config-changed',
   METRICS_UPDATE: 'metrics-update',
+  MENU_COMMAND: 'menu:command',
 } as const

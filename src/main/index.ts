@@ -4,12 +4,17 @@ import { configStore } from './configStore'
 import { siteViewManager } from './siteViewManager'
 import { registerIpcHandlers } from './ipcHandlers'
 import { migrateFromLegacy } from './legacyMigration'
+import { buildAndSetMenu, configureAboutPanel } from './appMenu'
+import { getWindowTitlebarOptions } from './windowTitlebar'
 import { IPC } from '@shared/types'
+
+const APP_NAME = 'Sidecar Monitor'
 
 /**
  * Set the explicit userData path before any session or config operations.
  * Must happen before app.getPath('userData') is first used.
  */
+app.setName(APP_NAME)
 const testUserData = !app.isPackaged ? process.env['SIDECAR_MONITOR_USER_DATA'] : undefined
 app.setPath(
   'userData',
@@ -66,8 +71,10 @@ function createWindow(): void {
     height: 900,
     minWidth: 800,
     minHeight: 500,
+    title: APP_NAME,
     backgroundColor: '#101722',
     icon: process.platform === 'darwin' ? undefined : windowIcon,
+    ...getWindowTitlebarOptions(process.platform),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -94,6 +101,9 @@ function createWindow(): void {
   siteViewManager.scheduleReconcile(configStore.get())
 
   const unregisterIpcHandlers = registerIpcHandlers(mainWindow)
+
+  // Build application menu after config is loaded.
+  buildAndSetMenu(() => mainWindow)
 
   // Load renderer
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -125,7 +135,7 @@ function createWindow(): void {
       const states = siteViewManager.getStates()
       mainWindow.webContents.send(IPC.METRICS_UPDATE, {
         siteCount: states.length,
-        failedCount: states.filter(s => s.status === 'failed' || s.status === 'crashed').length,
+        failedCount: states.filter(s => s.status === 'failed' || s.status === 'crashed' || s.status === 'unresponsive').length,
         memoryMB: Math.round(totalKB / 1024),
       })
     } catch {
@@ -162,6 +172,11 @@ if (!hasSingleInstanceLock) {
     mainWindow.focus()
   })
   app.whenReady().then(() => {
+    configureAboutPanel(
+      app.isPackaged
+        ? join(process.resourcesPath, 'icon.png')
+        : resolve('resources/icon.png'),
+    )
     openWindow().catch(console.error)
 
     app.on('activate', () => {

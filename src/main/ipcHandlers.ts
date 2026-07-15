@@ -4,6 +4,7 @@ import type { SlotBounds } from '@shared/types'
 import { parseConfig } from '@shared/configSchema'
 import { configStore } from './configStore'
 import { siteViewManager } from './siteViewManager'
+import { syncColumnsMenu } from './appMenu'
 
 /** Only accept IPC from the main window's own renderer. */
 function fromMainWindow(event: Electron.IpcMainInvokeEvent, win: BrowserWindow): boolean {
@@ -51,6 +52,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
       const config = parseConfig(raw)
       cs.save(config)
       svm.scheduleReconcile(config)
+      syncColumnsMenu(config.columns)
       // Return without sending CONFIG_CHANGED — the invoking renderer will update
       // its own store from the return value or its local mutation.
     } catch (err) {
@@ -175,7 +177,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
       const states = svm.getStates()
       return {
         siteCount: states.length,
-        failedCount: states.filter(s => s.status === 'failed' || s.status === 'crashed').length,
+        failedCount: states.filter(s => s.status === 'failed' || s.status === 'crashed' || s.status === 'unresponsive').length,
         memoryMB: Math.round(totalKB / 1024),
       }
     } catch {

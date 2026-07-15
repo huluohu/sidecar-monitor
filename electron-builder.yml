@@ -1,7 +1,7 @@
 appId: com.opentcs.sidecar-monitor
 productName: Sidecar Monitor
 executableName: sidecar-monitor
-copyright: Copyright © 2024
+copyright: Copyright © 2026
 
 directories:
   output: release
@@ -25,6 +25,9 @@ mac:
     - target: zip
       arch: [x64, arm64]
 
+dmg:
+  icon: resources/icon.icns
+
 win:
   icon: resources/icon.ico
   artifactName: sidecar-monitor-${version}-${arch}.${ext}
@@ -33,7 +36,7 @@ win:
       arch: [x64]
 
 linux:
-  icon: resources/icon.png
+  icon: resources/icons
   category: Utility
   maintainer: huluohu <fooololo@gmail.com>
   syncDesktopName: true
@@ -48,5 +51,8 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   installerLanguages: [en_US]
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
 
 publish: null

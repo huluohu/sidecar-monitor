@@ -76,7 +76,7 @@ function stateOf(id: string): SiteState | undefined {
           </button>
 
           <button
-            v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed'"
+            v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed' || stateOf(site.id)?.status === 'unresponsive'"
             class="cell-btn cell-btn--danger"
             title="恢复"
             @click="api.recoverSite(site.id)"
@@ -136,6 +136,11 @@ function stateOf(id: string): SiteState | undefined {
               :size="28"
             />
             <AppIcon
+              v-else-if="stateOf(site.id)?.status === 'unresponsive'"
+              name="unresponsive"
+              :size="28"
+            />
+            <AppIcon
               v-else
               name="loading"
               :size="28"
@@ -145,13 +150,14 @@ function stateOf(id: string): SiteState | undefined {
             <template v-if="stateOf(site.id)?.status === 'loading'">加载中…</template>
             <template v-else-if="stateOf(site.id)?.status === 'failed'">加载失败</template>
             <template v-else-if="stateOf(site.id)?.status === 'crashed'">渲染进程崩溃</template>
+            <template v-else-if="stateOf(site.id)?.status === 'unresponsive'">页面无响应</template>
           </div>
           <div
             v-if="stateOf(site.id)?.failReason"
             class="cell-overlay-err"
           >{{ stateOf(site.id)?.failReason }}</div>
           <button
-            v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed'"
+            v-if="stateOf(site.id)?.status === 'failed' || stateOf(site.id)?.status === 'crashed' || stateOf(site.id)?.status === 'unresponsive'"
             class="btn cell-overlay-action"
             @click="api.recoverSite(site.id)"
           >重试</button>

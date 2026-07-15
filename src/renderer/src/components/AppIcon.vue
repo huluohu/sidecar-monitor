@@ -102,6 +102,11 @@ withDefaults(defineProps<{
       <path d="M8.8 1.8 4.5 8h2.7L6.8 14.2l4.7-6.6H8.7l.1-5.8Z" fill="currentColor" />
     </template>
 
+    <template v-else-if="name === 'unresponsive'">
+      <circle cx="8" cy="8" r="5.7" stroke="currentColor" stroke-width="1.5" />
+      <path d="M6.3 5.5v5M9.7 5.5v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </template>
+
     <template v-else-if="name === 'trash'">
       <path d="M3.5 4.2h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
       <path d="M5.2 4.2V13h5.6V4.2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
