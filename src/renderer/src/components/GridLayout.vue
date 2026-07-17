@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { SiteConfig, SiteState } from '@shared/types'
 import AppIcon from './AppIcon.vue'
 
@@ -13,9 +13,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   focus: [id: string]
   unfocus: []
+  reorder: [sourceId: string, targetId: string]
 }>()
 
 const api = window.monitorAPI
+const draggedId = ref<string | null>(null)
+const dropTargetId = ref<string | null>(null)
 
 /**
  * The grid layout is purely for the cell-title bars rendered by Vue.
@@ -29,6 +32,38 @@ const rows = computed(() =>
 
 function stateOf(id: string): SiteState | undefined {
   return props.statesMap.get(id)
+}
+
+function onDragStart(event: DragEvent, id: string) {
+  if (props.focusedId || (event.target as HTMLElement).closest('button')) {
+    event.preventDefault()
+    return
+  }
+  draggedId.value = id
+  event.dataTransfer?.setData('text/plain', id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(event: DragEvent, targetId: string) {
+  if (!draggedId.value || draggedId.value === targetId) {
+    dropTargetId.value = null
+    return
+  }
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  dropTargetId.value = targetId
+}
+
+function onDrop(event: DragEvent, targetId: string) {
+  event.preventDefault()
+  const sourceId = draggedId.value
+  clearDragState()
+  if (sourceId && sourceId !== targetId) emit('reorder', sourceId, targetId)
+}
+
+function clearDragState() {
+  draggedId.value = null
+  dropTargetId.value = null
 }
 </script>
 
@@ -49,9 +84,19 @@ function stateOf(id: string): SiteState | undefined {
       :class="{
         'grid-cell--hidden': focusedId && focusedId !== site.id,
         'grid-cell--focused': focusedId === site.id,
+        'grid-cell--dragging': draggedId === site.id,
+        'grid-cell--drop-target': dropTargetId === site.id,
       }"
+      @dragover="onDragOver($event, site.id)"
+      @drop="onDrop($event, site.id)"
     >
-      <div class="cell-title">
+      <div
+        class="cell-title"
+        :draggable="!focusedId"
+        :title="focusedId ? undefined : '拖动排序'"
+        @dragstart="onDragStart($event, site.id)"
+        @dragend="clearDragState"
+      >
         <span
           class="cell-status-dot"
           :class="stateOf(site.id)?.status ?? 'loading'"

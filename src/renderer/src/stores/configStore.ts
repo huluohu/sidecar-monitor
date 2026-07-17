@@ -50,6 +50,12 @@ export const useConfigStore = defineStore('config', () => {
     // Config will be pushed back via onConfigChanged (main-initiated change)
   }
 
+  async function reorderSites(sourceId: string, targetId: string): Promise<void> {
+    const sites = reorderEnabledSites(config.value.sites, sourceId, targetId)
+    if (!sites) return
+    await save({ ...config.value, sites })
+  }
+
   async function setColumns(columns: number | 'auto'): Promise<void> {
     await save({ ...config.value, columns })
   }
@@ -78,11 +84,35 @@ export const useConfigStore = defineStore('config', () => {
     upsertSite,
     removeSite,
     moveSite,
+    reorderSites,
     setColumns,
     setFullscreenOnLaunch,
     applyExternalUpdate,
   }
 })
+
+export function reorderEnabledSites(
+  sites: SiteConfig[],
+  sourceId: string,
+  targetId: string,
+): SiteConfig[] | null {
+  if (sourceId === targetId) return null
+
+  const ordered = [...sites].sort((a, b) => a.order - b.order)
+  const enabled = ordered.filter(site => site.enabled)
+  const sourceIndex = enabled.findIndex(site => site.id === sourceId)
+  const targetIndex = enabled.findIndex(site => site.id === targetId)
+  if (sourceIndex === -1 || targetIndex === -1) return null
+
+  const [moved] = enabled.splice(sourceIndex, 1)
+  enabled.splice(targetIndex, 0, moved)
+
+  let enabledIndex = 0
+  return ordered.map((site, order) => ({
+    ...(site.enabled ? enabled[enabledIndex++] : site),
+    order,
+  }))
+}
 
 export function createConfigSnapshot(config: AppConfig): AppConfig {
   return {

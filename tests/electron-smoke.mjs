@@ -412,6 +412,54 @@ try {
     throw new Error(`Expected 5 live site views, received ${metrics.siteCount}`)
   }
 
+  // ── Drag a window title to reorder and persist the enabled sites ───────────
+  const initialSiteOrder = await page.evaluate(() =>
+    window.monitorAPI.getConfig().then(config =>
+      [...config.sites]
+        .filter(site => site.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(site => site.id),
+    ),
+  )
+  const expectedSiteOrder = [
+    initialSiteOrder[1],
+    initialSiteOrder[2],
+    initialSiteOrder[0],
+    ...initialSiteOrder.slice(3),
+  ]
+  await page
+    .locator(`[data-site-id="${initialSiteOrder[0]}"] .cell-title`)
+    .dragTo(page.locator(`[data-site-id="${initialSiteOrder[2]}"] .cell-title`))
+  await pollUntil(page, () =>
+    window.monitorAPI.getConfig().then(config =>
+      [...config.sites]
+        .filter(site => site.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(site => site.name)
+        .join(',') === 'Site 2,Site 3,Site 1,Site 4,Site 5',
+    ), { timeout: 5_000 })
+  const persistedSiteOrder = await page.evaluate(() =>
+    window.monitorAPI.getConfig().then(config =>
+      [...config.sites]
+        .filter(site => site.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(site => site.id),
+    ),
+  )
+  if (persistedSiteOrder.join(',') !== expectedSiteOrder.join(',')) {
+    throw new Error(
+      `Drag reorder did not persist: expected ${expectedSiteOrder}, got ${persistedSiteOrder}`,
+    )
+  }
+  const renderedSiteOrder = await page.locator('.grid-cell').evaluateAll(elements =>
+    elements.map(element => element.getAttribute('data-site-id')),
+  )
+  if (renderedSiteOrder.join(',') !== expectedSiteOrder.join(',')) {
+    throw new Error(
+      `Drag reorder did not update the grid: expected ${expectedSiteOrder}, got ${renderedSiteOrder}`,
+    )
+  }
+
   // ── Refresh All via toolbar (existing behavior) ────────────────────────────
   await page.locator('button[title="全部刷新"]').click()
   const confirmModal = page.locator('.confirm-modal')

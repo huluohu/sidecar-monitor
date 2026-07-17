@@ -188,6 +188,17 @@ async function handleUnfocus() {
   scheduleBoundsFlush()
 }
 
+async function handleReorder(sourceId: string, targetId: string) {
+  try {
+    await configStore.reorderSites(sourceId, targetId)
+  } catch (error) {
+    showToastMessage(
+      `排序失败：${error instanceof Error ? error.message : String(error)}`,
+      'error',
+    )
+  }
+}
+
 async function handleRefreshAll() {
   showConfirm.value = true
 }
@@ -269,6 +280,7 @@ async function handleExportConfig() {
         :effective-cols="layoutColumns"
         @focus="handleFocus"
         @unfocus="handleUnfocus"
+        @reorder="handleReorder"
       />
       <div v-else class="empty-state">
         <div class="empty-state-icon">
