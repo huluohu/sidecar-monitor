@@ -193,6 +193,9 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   ipcMain.handle(IPC.APP_TOGGLE_FULLSCREEN, (event) => {
     if (!fromMainWindow(event, win)) return
     win.setFullScreen(!win.isFullScreen())
+    if (process.platform !== 'darwin') {
+      win.webContents.send(IPC.FULLSCREEN_CHANGED, win.isFullScreen())
+    }
   })
 
   ipcMain.handle(IPC.APP_MOVE_SITE, (event, id: unknown, direction: unknown) => {

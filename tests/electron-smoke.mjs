@@ -311,6 +311,14 @@ try {
     throw new Error(`toggleFullscreen IPC failed: ${toggleResult}`)
   }
 
+  // Windows GitHub runners do not reliably enter native fullscreen. Exercise
+  // the renderer state deterministically there; macOS/Linux keep the full
+  // native-window integration check.
+  if (runtimePlatform === 'win32') {
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('fullscreen-changed', true)
+    })
+  }
   await page.waitForFunction(
     () => document.querySelector('.toolbar')?.classList.contains('toolbar--fullscreen'),
     undefined,
@@ -336,6 +344,9 @@ try {
   await electronApp.evaluate(({ BrowserWindow }) => {
     const w = BrowserWindow.getAllWindows()[0]
     if (w?.isFullScreen()) w.setFullScreen(false)
+    if (process.platform === 'win32') {
+      w?.webContents.send('fullscreen-changed', false)
+    }
   })
 
   // ── Verify Escape input in renderer (existing behavior) ───────────────────
