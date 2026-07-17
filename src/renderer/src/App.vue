@@ -26,6 +26,7 @@ const toastMessage = ref('')
 const toastVariant = ref<'success' | 'error' | 'info'>('info')
 const metrics = ref({ siteCount: 0, failedCount: 0, memoryMB: 0 })
 const layoutColumns = ref(1)
+const isFullscreen = ref(false)
 
 let rafId: number | null = null
 
@@ -89,8 +90,14 @@ let unsubState: (() => void) | null = null
 let unsubConfig: (() => void) | null = null
 let unsubMetrics: (() => void) | null = null
 let unsubMenu: (() => void) | null = null
+let unsubFullscreen: (() => void) | null = null
 
 onMounted(async () => {
+  unsubFullscreen = window.monitorAPI.onFullscreenChanged((fullscreen) => {
+    isFullscreen.value = fullscreen
+  })
+  isFullscreen.value = await window.monitorAPI.getFullscreen()
+
   await configStore.load()
   const states = await window.monitorAPI.getSiteStates()
   stateStore.setAll(states)
@@ -149,6 +156,7 @@ onUnmounted(() => {
   unsubConfig?.()
   unsubMetrics?.()
   unsubMenu?.()
+  unsubFullscreen?.()
   if (rafId !== null) cancelAnimationFrame(rafId)
 })
 
@@ -244,6 +252,7 @@ async function handleExportConfig() {
       :is-focused="focusedId !== null"
       :columns="configStore.config.columns"
       :site-count="configStore.enabledSites.length"
+      :is-fullscreen="isFullscreen"
       @unfocus="handleUnfocus"
       @refresh-all="handleRefreshAll"
       @toggle-fullscreen="handleToggleFullscreen"

@@ -1,6 +1,6 @@
 {
   "name": "sidecar-monitor",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Multi-site Sidecar monitor desktop tool",
   "homepage": "https://github.com/huluohu/sidecar-monitor",
   "author": {

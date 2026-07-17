@@ -7,6 +7,7 @@ const props = defineProps<{
   isFocused: boolean
   columns: number | 'auto'
   siteCount: number
+  isFullscreen: boolean
 }>()
 
 const emit = defineEmits<{
@@ -41,6 +42,7 @@ function onColsChange(e: Event) {
     :class="{
       'toolbar--macos': isMacOS,
       'toolbar--window-overlay': usesWindowControlsOverlay,
+      'toolbar--fullscreen': isFullscreen,
     }"
   >
     <span class="toolbar-brand">
@@ -91,8 +93,12 @@ function onColsChange(e: Event) {
     <button class="btn-icon" title="全部刷新" @click="emit('refreshAll')">
       <AppIcon name="refresh" :size="14" />
     </button>
-    <button class="btn-icon" title="全屏" @click="emit('toggleFullscreen')">
-      <AppIcon name="fullscreen-enter" :size="14" />
+    <button
+      class="btn-icon"
+      :title="isFullscreen ? '退出全屏' : '全屏'"
+      @click="emit('toggleFullscreen')"
+    >
+      <AppIcon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'" :size="14" />
     </button>
     <button class="btn-icon" title="设置" @click="emit('openSettings')">
       <AppIcon name="settings" :size="14" />

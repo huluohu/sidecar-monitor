@@ -58,6 +58,9 @@ const monitorAPI = {
   getMetrics: (): Promise<AppMetrics> =>
     ipcRenderer.invoke(IPC.APP_GET_METRICS),
 
+  getFullscreen: (): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.APP_GET_FULLSCREEN),
+
   toggleFullscreen: (): Promise<void> =>
     ipcRenderer.invoke(IPC.APP_TOGGLE_FULLSCREEN),
 
@@ -78,6 +81,12 @@ const monitorAPI = {
     const handler = (_e: unknown, metrics: AppMetrics) => cb(metrics)
     ipcRenderer.on(IPC.METRICS_UPDATE, handler)
     return () => ipcRenderer.off(IPC.METRICS_UPDATE, handler)
+  },
+
+  onFullscreenChanged: (cb: (fullscreen: boolean) => void): (() => void) => {
+    const handler = (_e: unknown, fullscreen: boolean) => cb(fullscreen)
+    ipcRenderer.on(IPC.FULLSCREEN_CHANGED, handler)
+    return () => ipcRenderer.off(IPC.FULLSCREEN_CHANGED, handler)
   },
 
   onMenuCommand: (cb: (cmd: MenuCommand) => void): (() => void) => {

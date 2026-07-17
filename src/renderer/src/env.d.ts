@@ -20,10 +20,12 @@ export interface MonitorAPI {
   moveSite: (id: string, direction: 'up' | 'down') => Promise<void>
   setBounds: (bounds: SlotBounds[]) => Promise<void>
   getMetrics: () => Promise<AppMetrics>
+  getFullscreen: () => Promise<boolean>
   toggleFullscreen: () => Promise<void>
   onSiteStateChanged: (cb: (state: SiteState) => void) => () => void
   onConfigChanged: (cb: (config: AppConfig) => void) => () => void
   onMetricsUpdate: (cb: (metrics: AppMetrics) => void) => () => void
+  onFullscreenChanged: (cb: (fullscreen: boolean) => void) => () => void
   onMenuCommand: (cb: (cmd: MenuCommand) => void) => () => void
 }
 

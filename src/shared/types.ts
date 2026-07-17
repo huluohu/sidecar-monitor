@@ -66,11 +66,13 @@ export const IPC = {
   SITES_SET_VISIBLE: 'sites:set-visible',
   LAYOUT_SET_BOUNDS: 'layout:set-bounds',
   APP_GET_METRICS: 'app:get-metrics',
+  APP_GET_FULLSCREEN: 'app:get-fullscreen',
   APP_TOGGLE_FULLSCREEN: 'app:toggle-fullscreen',
   APP_MOVE_SITE: 'app:move-site',
   // main → renderer (send)
   SITE_STATE_CHANGED: 'site-state-changed',
   CONFIG_CHANGED: 'config-changed',
   METRICS_UPDATE: 'metrics-update',
+  FULLSCREEN_CHANGED: 'fullscreen-changed',
   MENU_COMMAND: 'menu:command',
 } as const

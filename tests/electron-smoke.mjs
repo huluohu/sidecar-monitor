@@ -193,6 +193,7 @@ try {
       paddingRight: Number.parseFloat(style.paddingRight),
       isMacOS: element.classList.contains('toolbar--macos'),
       usesWindowControlsOverlay: element.classList.contains('toolbar--window-overlay'),
+      isFullscreen: element.classList.contains('toolbar--fullscreen'),
     }
   })
   if (runtimePlatform === 'darwin') {
@@ -297,14 +298,41 @@ try {
   }
   console.log(`Menu structure validated on ${menuAssertion.platform}`)
 
-  // ── Verify toggle-fullscreen IPC is wired (no OS fullscreen needed) ────────
+  // ── Verify fullscreen state and toolbar safe areas ─────────────────────────
+  const initialFullscreen = await page.evaluate(() => window.monitorAPI.getFullscreen())
+  if (initialFullscreen || toolbarMetrics.isFullscreen) {
+    throw new Error('Expected the app and toolbar to start outside fullscreen')
+  }
+
   const toggleResult = await page.evaluate(() =>
     window.monitorAPI.toggleFullscreen().then(() => 'ok', e => String(e)),
   )
   if (toggleResult !== 'ok') {
     throw new Error(`toggleFullscreen IPC failed: ${toggleResult}`)
   }
-  // Restore window to non-fullscreen (it may not have entered it in headless).
+
+  await page.waitForFunction(
+    () => document.querySelector('.toolbar')?.classList.contains('toolbar--fullscreen'),
+    undefined,
+    { timeout: 5000 },
+  )
+  const fullscreenToolbarMetrics = await page.locator('.toolbar').evaluate(element => {
+    const style = getComputedStyle(element)
+    return {
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+      paddingRight: Number.parseFloat(style.paddingRight),
+    }
+  })
+  if (
+    fullscreenToolbarMetrics.paddingLeft !== 12 ||
+    fullscreenToolbarMetrics.paddingRight !== 12
+  ) {
+    throw new Error(
+      `Expected 12px fullscreen toolbar edges, got ${JSON.stringify(fullscreenToolbarMetrics)}`,
+    )
+  }
+
+  // Restore window to non-fullscreen.
   await electronApp.evaluate(({ BrowserWindow }) => {
     const w = BrowserWindow.getAllWindows()[0]
     if (w?.isFullScreen()) w.setFullScreen(false)

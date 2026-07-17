@@ -185,6 +185,11 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
     }
   })
 
+  ipcMain.handle(IPC.APP_GET_FULLSCREEN, (event) => {
+    if (!fromMainWindow(event, win)) return false
+    return win.isFullScreen()
+  })
+
   ipcMain.handle(IPC.APP_TOGGLE_FULLSCREEN, (event) => {
     if (!fromMainWindow(event, win)) return
     win.setFullScreen(!win.isFullScreen())
@@ -232,6 +237,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
       IPC.SITES_SET_VISIBLE,
       IPC.LAYOUT_SET_BOUNDS,
       IPC.APP_GET_METRICS,
+      IPC.APP_GET_FULLSCREEN,
       IPC.APP_TOGGLE_FULLSCREEN,
       IPC.APP_MOVE_SITE,
     ]) {

@@ -139,6 +139,11 @@ input::placeholder {
   );
 }
 
+.toolbar--fullscreen {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
 .toolbar > * {
   -webkit-app-region: no-drag;
 }

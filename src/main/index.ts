@@ -101,6 +101,11 @@ function createWindow(): void {
   siteViewManager.scheduleReconcile(configStore.get())
 
   const unregisterIpcHandlers = registerIpcHandlers(mainWindow)
+  const sendFullscreenState = () => {
+    mainWindow?.webContents.send(IPC.FULLSCREEN_CHANGED, mainWindow.isFullScreen())
+  }
+  mainWindow.on('enter-full-screen', sendFullscreenState)
+  mainWindow.on('leave-full-screen', sendFullscreenState)
 
   // Build application menu after config is loaded.
   buildAndSetMenu(() => mainWindow)
@@ -121,6 +126,8 @@ function createWindow(): void {
 
   mainWindow.on('closed', () => {
     clearInterval(metricsInterval)
+    mainWindow?.off('enter-full-screen', sendFullscreenState)
+    mainWindow?.off('leave-full-screen', sendFullscreenState)
     unregisterIpcHandlers()
     siteViewManager.destroy()
     mainWindow = null
