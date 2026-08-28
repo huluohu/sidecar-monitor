@@ -129,3 +129,21 @@ jobs:
         with:
           generate_release_notes: true
           files: release/*
+
+  notify:
+    name: Notify WeCom
+    needs: [package, release]
+    if: always()
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Send notification
+        env:
+          WECOM_WEBHOOK_URL: ${{ secrets.WECOM_WEBHOOK_URL }}
+          STATUS: ${{ needs.package.result == 'success' && (needs.release.result == 'success' || needs.release.result == 'skipped') && 'success' || 'failure' }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+        run: node scripts/notify-wecom.mjs
