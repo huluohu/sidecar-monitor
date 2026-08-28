@@ -464,6 +464,53 @@ input::placeholder {
   background: #0c1118;
 }
 
+/* Loading motion: an amber indeterminate bar slides along the top edge… */
+.cell-body--loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 2px;
+  z-index: 2;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--color-loading), transparent);
+  animation: loading-bar-slide 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* …and a faint light band sweeps across the whole cell. Both sit above the
+ * overlay so they stay visible over its dim background. */
+.cell-body--loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.035) 45%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.035) 55%,
+    transparent 75%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer-sweep 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes loading-bar-slide {
+  0%   { transform: translateX(-100%); }
+  55%  { transform: translateX(250%); }
+  100% { transform: translateX(250%); }
+}
+
+@keyframes shimmer-sweep {
+  0%   { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+
 .cell-overlay {
   position: absolute;
   inset: 0;
@@ -475,10 +522,13 @@ input::placeholder {
   background: rgba(16, 23, 34, 0.9);
   font-size: 12px;
   text-align: center;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .cell-overlay.hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .cell-overlay-icon {

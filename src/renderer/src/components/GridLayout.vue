@@ -164,7 +164,10 @@ function clearDragState() {
         </div>
       </div>
 
-      <div class="cell-body">
+      <div
+        class="cell-body"
+        :class="{ 'cell-body--loading': (stateOf(site.id)?.status ?? 'loading') === 'loading' }"
+      >
         <div
           class="cell-overlay"
           :class="{ hidden: stateOf(site.id)?.status === 'ready' }"

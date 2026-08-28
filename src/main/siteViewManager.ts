@@ -451,11 +451,12 @@ class SiteViewManager {
     for (const [id, managed] of this.sites) {
       if (!this.sites.has(id)) continue // destroyed while setImmediate was pending
       const { status } = managed.state
-      const isHealthy =
-        status !== 'failed' && status !== 'crashed' && status !== 'unresponsive'
+      // The native view always renders above the renderer overlay; only show
+      // it once the document is ready so the loading animation stays visible.
+      const isLoaded = status === 'ready'
       const isFocused = this.focusedId === null || this.focusedId === id
       try {
-        managed.view.setVisible(this.globallyVisible && isHealthy && isFocused)
+        managed.view.setVisible(this.globallyVisible && isLoaded && isFocused)
       } catch {
         // View may have been destroyed between scheduling and this tick.
       }
