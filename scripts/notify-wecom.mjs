@@ -10,6 +10,9 @@
  *   RELEASE_RESULT     — result of the release job.
  *   GITHUB_*           — standard GitHub Actions variables for the message.
  *
+ * Uses the plain-text msgtype: the WeChat WeCom plugin does not render
+ * robot markdown messages ("暂不支持此消息类型").
+ *
  * Exits non-zero when the robot rejects the message so misconfiguration is
  * visible in the run log.
  */
@@ -28,30 +31,26 @@ const runUrl = `https://github.com/${repo}/actions/runs/${process.env.GITHUB_RUN
 
 let lines
 if (process.env.STATUS === 'success') {
-  lines = [
-    `**${workflow} 构建成功**`,
-    `> 版本：<font color="info">${ref}</font>`,
-    `> 触发者：${actor}`,
-  ]
-  if (isTag) lines.push(`> [下载 Release](https://github.com/${repo}/releases/tag/${ref})`)
+  lines = [`✅ ${workflow} 构建成功`, `版本：${ref}`, `触发者：${actor}`]
+  if (isTag) lines.push(`下载：https://github.com/${repo}/releases/tag/${ref}`)
 } else {
   const stage =
     process.env.PACKAGE_RESULT !== 'success'
       ? `打包（${process.env.PACKAGE_RESULT || '-'}）`
       : `发版（${process.env.RELEASE_RESULT || '-'}）`
   lines = [
-    `**${workflow} 构建失败**`,
-    `> 阶段：<font color="warning">${stage}</font>`,
-    `> 分支/标签：${ref}`,
-    `> 触发者：${actor}`,
+    `❌ ${workflow} 构建失败`,
+    `阶段：${stage}`,
+    `分支/标签：${ref}`,
+    `触发者：${actor}`,
   ]
 }
-lines.push(`> [运行日志](${runUrl})`)
+lines.push(`日志：${runUrl}`)
 
 const res = await fetch(url, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ msgtype: 'markdown', markdown: { content: lines.join('\n') } }),
+  body: JSON.stringify({ msgtype: 'text', text: { content: lines.join('\n') } }),
 })
 const data = await res.json().catch(() => null)
 if (!res.ok || data?.errcode !== 0) {
