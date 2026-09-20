@@ -3,6 +3,7 @@ import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
 import { IPC } from '@shared/types'
 import type { MenuCommand } from '@shared/types'
 import { configStore } from './configStore'
+import { startUpdateFlow } from './updateManager'
 
 // ── Pure template builder (testable without Electron) ─────────────────────────
 
@@ -14,6 +15,7 @@ export interface MenuTemplateOpts {
   onCommand: (cmd: MenuCommand) => void
   onAbout: () => void
   onHomepage: () => void
+  onCheckUpdates: () => void
 }
 
 const COLUMN_VALUES: Array<number | 'auto'> = [
@@ -22,7 +24,16 @@ const COLUMN_VALUES: Array<number | 'auto'> = [
 ]
 
 export function buildMenuTemplate(opts: MenuTemplateOpts): MenuItemConstructorOptions[] {
-  const { platform, version, appName, columns, onCommand, onAbout, onHomepage } = opts
+  const {
+    platform,
+    version,
+    appName,
+    columns,
+    onCommand,
+    onAbout,
+    onHomepage,
+    onCheckUpdates,
+  } = opts
   const isMac = platform === 'darwin'
 
   const layoutSubmenu: MenuItemConstructorOptions[] = COLUMN_VALUES.map(val => ({
@@ -139,6 +150,12 @@ export function buildMenuTemplate(opts: MenuTemplateOpts): MenuItemConstructorOp
       label: 'Help',
       submenu: [
         {
+          id: 'check-updates',
+          label: 'Check for Updates…',
+          click: onCheckUpdates,
+        },
+        { type: 'separator' },
+        {
           id: 'homepage',
           label: 'Project Homepage',
           click: onHomepage,
@@ -200,6 +217,7 @@ function applyMenu(columns: number | 'auto'): void {
     columns,
     onCommand: sendCommand,
     onAbout: showAbout,
+    onCheckUpdates: () => startUpdateFlow(getMainWindowFn),
     onHomepage: () => {
       void shell.openExternal('https://github.com/huluohu/sidecar-monitor').catch(error => {
         console.error('[Menu] Failed to open project homepage:', error)

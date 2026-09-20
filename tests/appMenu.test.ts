@@ -31,6 +31,7 @@ const baseOpts: MenuTemplateOpts = {
   onCommand: vi.fn(),
   onAbout: vi.fn(),
   onHomepage: vi.fn(),
+  onCheckUpdates: vi.fn(),
 }
 
 function findSubmenu(
@@ -235,6 +236,11 @@ describe('buildMenuTemplate — actionable item IDs', () => {
     expect(items.find(i => i.label === 'Project Homepage')?.id).toBe('homepage')
   })
 
+  it('Check for Updates has id "check-updates"', () => {
+    const items = findSubmenu(buildMenuTemplate(baseOpts), 'Help')
+    expect(items.find(i => i.label === 'Check for Updates…')?.id).toBe('check-updates')
+  })
+
   it('Win/Linux Help About has id "about"', () => {
     const items = findSubmenu(buildMenuTemplate({ ...baseOpts, platform: 'linux' }), 'Help')
     const about = items.find(i => i.label?.includes('About'))!
@@ -303,5 +309,13 @@ describe('buildMenuTemplate — command callbacks', () => {
     const hp = items.find(i => i.label === 'Project Homepage')!
     hp.click!(hp as never, {} as never, {} as never)
     expect(onHomepage).toHaveBeenCalled()
+  })
+
+  it('onCheckUpdates called from Help > Check for Updates', () => {
+    const onCheckUpdates = vi.fn()
+    const items = findSubmenu(buildMenuTemplate({ ...baseOpts, onCheckUpdates }), 'Help')
+    const check = items.find(i => i.label === 'Check for Updates…')!
+    check.click!(check as never, {} as never, {} as never)
+    expect(onCheckUpdates).toHaveBeenCalledOnce()
   })
 })

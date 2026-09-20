@@ -34,6 +34,26 @@
 
 macOS 使用原生菜单和快捷键；Windows 与 Linux 提供同等功能，并遵循各自平台的菜单惯例。
 
+### 检查更新
+
+通过原生菜单 **Help → Check for Updates…** 可检查 GitHub Releases 中的最新稳定版。
+正式打包版本发现更新后可在应用内下载，下载进度会显示在任务栏或程序坞；下载完成后
+可选择立即重启安装或稍后安装。开发模式下只检查版本并打开下载页面。
+
+应用内安装使用 GitHub Release 中由 `electron-builder` 生成的 `latest*.yml` 和
+`.blockmap` 校验、定位对应平台的安装包。Windows 使用 NSIS，macOS 使用 ZIP，Linux
+根据安装来源使用 AppImage、deb 或 rpm。macOS 自动安装要求 Release 中的应用使用
+Developer ID 正确签名；未签名构建会提示失败并提供手动下载入口。
+
+发布签名可在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 配置：
+
+- macOS：`MAC_CSC_LINK`（Developer ID Application 的 `.p12` Base64 或下载地址）和
+  `MAC_CSC_KEY_PASSWORD`。
+- Windows（推荐）：`WIN_CSC_LINK` 和 `WIN_CSC_KEY_PASSWORD`。未签名安装包仍可更新，
+  但 Windows 可能显示 SmartScreen 警告。
+
+未配置 Secret 时 CI 仍会生成安装包，但 macOS 应用内自动安装不可用。
+
 ## 开发
 
 **前置要求：** Node.js 20.19+（推荐 22.12+），npm 10+
@@ -155,6 +175,8 @@ git push origin v0.1.1
 
 `v*` 标签会触发构建并自动创建 GitHub Release。标签必须与 `package.json`
 版本一致，否则发布任务会失败；手动触发只上传 Actions Artifacts，不创建 Release。
+发布工作流会同时上传应用内更新所需的 `latest*.yml` 和 `.blockmap` 文件，请勿从
+Release 中删除这些文件，否则已安装客户端无法发现或下载该版本。
 
 产物命名（由 `electron-builder.yml` 中的 `artifactName` 控制）：
 

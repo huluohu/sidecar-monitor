@@ -17,9 +17,9 @@
     "test:electron": "npm run build && node tests/electron-smoke.mjs",
     "build": "electron-vite build",
     "clean:release": "node scripts/clean-release.mjs",
-    "dist:win": "npm run clean:release && npm run build && electron-builder --win",
-    "dist:mac": "npm run clean:release && npm run build && electron-builder --mac",
-    "dist:linux": "npm run clean:release && npm run build && electron-builder --linux",
+    "dist:win": "npm run clean:release && npm run build && electron-builder --win --publish never",
+    "dist:mac": "npm run clean:release && npm run build && electron-builder --mac --publish never",
+    "dist:linux": "npm run clean:release && npm run build && electron-builder --linux --publish never",
     "verify:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
@@ -36,6 +36,7 @@
     "vue-tsc": "^3.3.0"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "pinia": "^3.0.0",
     "vue": "^3.5.0"
   }

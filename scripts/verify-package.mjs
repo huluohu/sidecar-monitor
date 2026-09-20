@@ -114,6 +114,10 @@ function validateMac() {
 
       const icnsPath = join(bundle, 'Contents', 'Resources', iconFile)
       assertFile(icnsPath, `icon (${iconFile})`)
+      assertFile(
+        join(bundle, 'Contents', 'Resources', 'app-update.yml'),
+        'embedded update config',
+      )
     }
   }
 
@@ -124,6 +128,8 @@ function validateMac() {
     (f) => f.endsWith('.zip') && !f.endsWith('.blockmap'),
     'ZIP',
   )
+  requireArtifact(RELEASE, (f) => /^latest-mac.*\.yml$/.test(f), 'macOS update metadata')
+  requireArtifact(RELEASE, (f) => f.endsWith('.zip.blockmap'), 'macOS ZIP blockmap')
 
   console.log('\n✅  macOS validation passed\n')
 }
@@ -139,6 +145,12 @@ function validateWin() {
 
   // NSIS installer lives in release root (not inside win-unpacked/)
   const installers = requireArtifact(RELEASE, (f) => f.endsWith('.exe'), 'NSIS installer')
+  assertFile(resolve(RELEASE, 'latest.yml'), 'Windows update metadata')
+  requireArtifact(RELEASE, (f) => f.endsWith('.exe.blockmap'), 'Windows installer blockmap')
+  assertFile(
+    resolve(RELEASE, 'win-unpacked', 'resources', 'app-update.yml'),
+    'embedded update config',
+  )
 
   // On Windows: use PowerShell / System.Drawing to verify icons are non-null
   if (process.platform === 'win32') {
@@ -311,6 +323,7 @@ async function validateLinux() {
   const debs = requireArtifact(RELEASE, (f) => f.endsWith('.deb'), 'DEB')
   const rpms = requireArtifact(RELEASE, (f) => f.endsWith('.rpm'), 'RPM')
   const appImages = requireArtifact(RELEASE, (f) => f.endsWith('.AppImage'), 'AppImage')
+  requireArtifact(RELEASE, (f) => /^latest-linux.*\.yml$/.test(f), 'Linux update metadata')
 
   for (const deb of debs) checkDebPackage(deb)
   for (const rpm of rpms) await checkRpmPackage(rpm)

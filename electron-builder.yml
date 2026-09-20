@@ -55,4 +55,7 @@ nsis:
   uninstallerIcon: resources/icon.ico
   installerHeaderIcon: resources/icon.ico
 
-publish: null
+publish:
+  provider: github
+  owner: huluohu
+  repo: sidecar-monitor
