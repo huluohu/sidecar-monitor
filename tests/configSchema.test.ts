@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseConfig, validateSite, isHttpUrl, DEFAULT_CONFIG } from '../src/shared/configSchema'
+import { parseConfig, validateSite, isHttpUrl, normalizeZoomFactor, DEFAULT_CONFIG } from '../src/shared/configSchema'
 import type { AppConfig } from '../src/shared/types'
 
 describe('isHttpUrl', () => {
@@ -115,5 +115,21 @@ describe('parseConfig', () => {
       zoomFactor: 1,
     }
     expect(() => parseConfig({ ...minimal, sites: [site, { ...site, order: 1 }] })).toThrow('unique')
+  })
+})
+
+describe('normalizeZoomFactor', () => {
+  it('clamps to the valid range', () => {
+    expect(normalizeZoomFactor(0)).toBe(0.1)
+    expect(normalizeZoomFactor(-2)).toBe(0.1)
+    expect(normalizeZoomFactor(6)).toBe(5)
+    expect(normalizeZoomFactor(50)).toBe(5)
+  })
+
+  it('rounds to one decimal so ±0.1 steps do not accumulate float drift', () => {
+    expect(normalizeZoomFactor(0.8 - 0.1)).toBe(0.7)
+    expect(normalizeZoomFactor(0.1 + 0.2)).toBe(0.3)
+    expect(normalizeZoomFactor(1.7000000000000002)).toBe(1.7)
+    expect(normalizeZoomFactor(1)).toBe(1)
   })
 })

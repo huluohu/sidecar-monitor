@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isHttpUrl, isSameOrigin, classifyNavigation, getOrigin } from '../src/shared/urlPolicy'
+import { isHttpUrl, isSameOrigin, getOrigin } from '../src/shared/urlPolicy'
 
 describe('isHttpUrl', () => {
   it('accepts http/https', () => {
@@ -59,24 +59,3 @@ describe('getOrigin', () => {
   })
 })
 
-describe('classifyNavigation', () => {
-  const configured = 'https://site.example.com/dashboard'
-
-  it('same-origin → allow', () => {
-    expect(classifyNavigation('https://site.example.com/login', configured)).toBe('allow')
-    expect(classifyNavigation('https://site.example.com/', configured)).toBe('allow')
-  })
-
-  it('cross-origin http(s) → external', () => {
-    expect(classifyNavigation('https://auth.other.com/sso', configured)).toBe('external')
-    expect(classifyNavigation('http://docs.example.com', configured)).toBe('external')
-  })
-
-  it('non-http protocol → block', () => {
-    expect(classifyNavigation('file:///etc/passwd', configured)).toBe('block')
-    expect(classifyNavigation('javascript:alert(1)', configured)).toBe('block')
-    expect(classifyNavigation('data:text/html,x', configured)).toBe('block')
-    expect(classifyNavigation('blob:null/id', configured)).toBe('block')
-    expect(classifyNavigation('', configured)).toBe('block')
-  })
-})

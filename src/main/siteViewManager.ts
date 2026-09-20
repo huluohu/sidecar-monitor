@@ -1,5 +1,6 @@
 import { WebContentsView, session, BrowserWindow, app } from 'electron'
 import type { AppConfig, SiteConfig, SiteState, SlotBounds } from '@shared/types'
+import { normalizeZoomFactor } from '@shared/configSchema'
 import { applyNavigationPolicy, applySessionPolicy } from './navigationPolicy'
 import { ReconcileQueue } from './reconcileQueue'
 import { loadScheduler } from './loadScheduler'
@@ -124,14 +125,6 @@ class SiteViewManager {
 
   private enqueueReconcile(config: AppConfig): void {
     this.reconcileQueue.schedule({ config, generation: this.generation })
-  }
-
-  /**
-   * Convenience alias kept for initial startup call (settings never open at that point).
-   * @deprecated use scheduleReconcile
-   */
-  syncConfig(config: AppConfig): void {
-    this.scheduleReconcile(config)
   }
 
   private async _doReconcile(config: AppConfig): Promise<void> {
@@ -504,9 +497,9 @@ class SiteViewManager {
   setZoom(id: string, factor: number): void {
     const m = this.sites.get(id)
     if (!m) return
-    const clamped = Math.max(0.1, Math.min(5.0, factor))
-    m.view.webContents.setZoomFactor(clamped)
-    m.config = { ...m.config, zoomFactor: clamped }
+    const normalized = normalizeZoomFactor(factor)
+    m.view.webContents.setZoomFactor(normalized)
+    m.config = { ...m.config, zoomFactor: normalized }
   }
 
   goBack(id: string): void {

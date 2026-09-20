@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, dialog, app } from 'electron'
 import { IPC } from '@shared/types'
 import type { SlotBounds } from '@shared/types'
-import { parseConfig } from '@shared/configSchema'
+import { normalizeZoomFactor, parseConfig } from '@shared/configSchema'
 import { configStore } from './configStore'
 import { siteViewManager } from './siteViewManager'
 import { syncColumnsMenu } from './appMenu'
@@ -40,7 +40,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
    * CONFIG_SAVE: persist config, then schedule a reconcile and return immediately.
    *
    * Key properties:
-   * - Does NOT call svm.syncConfig() synchronously (would create/mount views before returning).
+   * - Does NOT call svm.scheduleReconcile() synchronously (would create/mount views before returning).
    * - Does NOT send CONFIG_CHANGED back to the saving renderer (avoids nested invoke).
    * - Renderer updates its local config.value after the returned promise resolves.
    * - SiteViewManager reconcile (which may create WebContentsViews) runs asynchronously
@@ -122,7 +122,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
     if (idx !== -1) {
       config.sites[idx] = {
         ...config.sites[idx],
-        zoomFactor: Math.max(0.1, Math.min(5, factor as number)),
+        zoomFactor: normalizeZoomFactor(factor),
       }
       cs.save(config)
       win.webContents.send(IPC.CONFIG_CHANGED, config)

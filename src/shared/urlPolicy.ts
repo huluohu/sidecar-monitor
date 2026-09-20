@@ -38,24 +38,6 @@ export function getOrigin(url: string): string {
   }
 }
 
-/**
- * Classify a navigation destination relative to a site's configured URL.
- *
- * 'allow'    — same-origin, proceed normally
- * 'block'    — non-http(s) or otherwise disallowed
- * 'external' — http(s) but cross-origin: offer to shell.openExternal
- */
-export type NavigationDecision = 'allow' | 'block' | 'external'
-
-export function classifyNavigation(
-  targetUrl: string,
-  configuredUrl: string,
-): NavigationDecision {
-  if (!isHttpUrl(targetUrl)) return 'block'
-  if (isSameOrigin(targetUrl, configuredUrl)) return 'allow'
-  return 'external'
-}
-
 // ---------------------------------------------------------------------------
 // Stateful redirect-chain policy — state machine
 // ---------------------------------------------------------------------------

@@ -42,7 +42,19 @@ const allSites = computed(() =>
 )
 
 async function toggleEnabled(site: SiteConfig) {
-  await configStore.upsertSite({ ...site, enabled: !site.enabled })
+  try {
+    await configStore.upsertSite({ ...site, enabled: !site.enabled })
+  } catch (error) {
+    emit('toast', `操作失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+  }
+}
+
+async function moveSite(id: string, direction: 'up' | 'down') {
+  try {
+    await configStore.moveSite(id, direction)
+  } catch (error) {
+    emit('toast', `操作失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+  }
 }
 
 async function deleteSite(id: string) {
@@ -205,14 +217,14 @@ function handleConfirmCancel() {
                 <button
                   class="btn-icon"
                   title="上移"
-                  @click="configStore.moveSite(site.id, 'up')"
+                  @click="moveSite(site.id, 'up')"
                 >
                   <AppIcon name="arrow-up" :size="12" />
                 </button>
                 <button
                   class="btn-icon"
                   title="下移"
-                  @click="configStore.moveSite(site.id, 'down')"
+                  @click="moveSite(site.id, 'down')"
                 >
                   <AppIcon name="arrow-down" :size="12" />
                 </button>

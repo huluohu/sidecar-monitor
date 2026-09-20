@@ -118,19 +118,11 @@ function createWindow(): void {
   }
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow!.show()
+    if (!mainWindow) return // window closed before the page finished loading
+    mainWindow.show()
     if (configStore.get().fullscreenOnLaunch) {
-      mainWindow!.setFullScreen(true)
+      mainWindow.setFullScreen(true)
     }
-  })
-
-  mainWindow.on('closed', () => {
-    clearInterval(metricsInterval)
-    mainWindow?.off('enter-full-screen', sendFullscreenState)
-    mainWindow?.off('leave-full-screen', sendFullscreenState)
-    unregisterIpcHandlers()
-    siteViewManager.destroy()
-    mainWindow = null
   })
 
   // Periodically push metrics
@@ -149,6 +141,15 @@ function createWindow(): void {
       // ignore metrics errors
     }
   }, 5000)
+
+  mainWindow.on('closed', () => {
+    clearInterval(metricsInterval)
+    mainWindow?.off('enter-full-screen', sendFullscreenState)
+    mainWindow?.off('leave-full-screen', sendFullscreenState)
+    unregisterIpcHandlers()
+    siteViewManager.destroy()
+    mainWindow = null
+  })
 
   // Block navigation in the main window itself
   mainWindow.webContents.on('will-navigate', (event, url) => {

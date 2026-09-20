@@ -49,6 +49,12 @@ export function validateColumns(v: unknown): v is number | 'auto' {
   )
 }
 
+/** Clamp to the valid zoom range (0.1–5.0) and round to the UI step of 0.1. */
+export function normalizeZoomFactor(value: number): number {
+  const clamped = Math.max(0.1, Math.min(5.0, value))
+  return Math.round(clamped * 10) / 10
+}
+
 /**
  * Parse and validate a raw config object, returning a clean AppConfig.
  * Throws on invalid input so broken configuration is never partially applied.
