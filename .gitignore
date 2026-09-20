@@ -7,3 +7,4 @@ release/
 /.idea/modules.xml
 /.idea/vcs.xml
 .zcode/
+/.idea/sidecar-monitor.iml
