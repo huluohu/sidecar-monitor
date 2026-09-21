@@ -164,6 +164,10 @@ withDefaults(defineProps<{
       <path d="M5.7 5.7 10.3 10.3M10.3 5.7l-4.6 4.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
     </template>
 
+    <template v-else-if="name === 'menu'">
+      <path d="M2.8 4.4h10.4M2.8 8h10.4M2.8 11.6h10.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    </template>
+
     <template v-else-if="name === 'check-circle'">
       <circle cx="8" cy="8" r="5.7" stroke="currentColor" stroke-width="1.5" />
       <path d="m5.2 8.1 1.8 1.8 3.8-3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />

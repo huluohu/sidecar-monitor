@@ -269,6 +269,69 @@ input::placeholder {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.toolbar-menu {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.toolbar-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.app-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 91;
+  min-width: 224px;
+  padding: 6px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+
+.app-menu-item:hover {
+  background: var(--color-panel-hover);
+}
+
+.app-menu-item:active {
+  background: var(--color-divider);
+}
+
+.app-menu-sep {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--color-border);
+}
+
+.app-menu-shortcut {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-text-dim);
+}
+
 .btn-primary {
   background: linear-gradient(180deg, #5aadff, #4e9de8);
   border-color: rgba(78, 157, 232, 0.6);

@@ -269,6 +269,8 @@ async function handleExportConfig() {
       @toggle-fullscreen="handleToggleFullscreen"
       @open-settings="showSettings = true"
       @set-columns="c => configStore.setColumns(c)"
+      @import-config="handleImportConfig"
+      @export-config="handleExportConfig"
     />
 
     <div ref="gridAreaRef" class="grid-area">

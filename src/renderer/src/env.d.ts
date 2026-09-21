@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand } from '@shared/types'
+import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand, AppMenuAction } from '@shared/types'
 
 export interface MonitorAPI {
   platform: NodeJS.Platform
@@ -22,6 +22,7 @@ export interface MonitorAPI {
   getMetrics: () => Promise<AppMetrics>
   getFullscreen: () => Promise<boolean>
   toggleFullscreen: () => Promise<void>
+  appMenuAction: (action: AppMenuAction) => Promise<void>
   onSiteStateChanged: (cb: (state: SiteState) => void) => () => void
   onConfigChanged: (cb: (config: AppConfig) => void) => () => void
   onMetricsUpdate: (cb: (metrics: AppMetrics) => void) => () => void

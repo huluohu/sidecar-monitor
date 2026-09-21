@@ -4,7 +4,7 @@ import type { SlotBounds } from '@shared/types'
 import { normalizeZoomFactor, parseConfig } from '@shared/configSchema'
 import { configStore } from './configStore'
 import { siteViewManager } from './siteViewManager'
-import { syncColumnsMenu } from './appMenu'
+import { syncColumnsMenu, handleAppMenuAction } from './appMenu'
 
 /** Only accept IPC from the main window's own renderer. */
 function fromMainWindow(event: Electron.IpcMainInvokeEvent, win: BrowserWindow): boolean {
@@ -223,6 +223,11 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
     win.webContents.send(IPC.CONFIG_CHANGED, newConfig)
   })
 
+  ipcMain.handle(IPC.APP_MENU_ACTION, (event, action: unknown) => {
+    if (!fromMainWindow(event, win)) return
+    handleAppMenuAction(action)
+  })
+
   return () => {
     for (const channel of [
       IPC.CONFIG_GET,
@@ -243,6 +248,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
       IPC.APP_GET_FULLSCREEN,
       IPC.APP_TOGGLE_FULLSCREEN,
       IPC.APP_MOVE_SITE,
+      IPC.APP_MENU_ACTION,
     ]) {
       ipcMain.removeHandler(channel)
     }

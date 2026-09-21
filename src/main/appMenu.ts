@@ -1,5 +1,6 @@
 import { app, Menu, shell, dialog } from 'electron'
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
+import { join, resolve } from 'node:path'
 import { IPC } from '@shared/types'
 import type { MenuCommand } from '@shared/types'
 import { configStore } from './configStore'
@@ -180,6 +181,7 @@ export function buildMenuTemplate(opts: MenuTemplateOpts): MenuItemConstructorOp
 // ── Runtime menu management ────────────────────────────────────────────────────
 
 const APP_NAME = 'Sidecar Monitor'
+const APP_HOMEPAGE_URL = 'https://github.com/huluohu/sidecar-monitor'
 
 let getMainWindowFn: () => BrowserWindow | null = () => null
 
@@ -187,25 +189,39 @@ function sendCommand(cmd: MenuCommand): void {
   getMainWindowFn()?.webContents.send(IPC.MENU_COMMAND, cmd)
 }
 
+function openHomepage(): void {
+  void shell.openExternal(APP_HOMEPAGE_URL).catch(error => {
+    console.error('[Menu] Failed to open project homepage:', error)
+  })
+}
+
 function showAbout(): void {
   const version = app.getVersion()
-  if (process.platform === 'darwin') {
-    app.showAboutPanel()
-  } else {
-    const options: Electron.MessageBoxOptions = {
-      type: 'info',
-      title: 'About Sidecar Monitor',
-      message: `Sidecar Monitor v${version}`,
-      detail: `Copyright © 2026\nhttps://github.com/huluohu/sidecar-monitor`,
-    }
-    const win = getMainWindowFn()
-    const showDialog = win && !win.isDestroyed()
-      ? dialog.showMessageBox(win, options)
-      : dialog.showMessageBox(options)
-    void showDialog.catch(error => {
+  const win = getMainWindowFn()
+  const options: Electron.MessageBoxOptions = {
+    type: 'info',
+    // Custom dialog with the app icon on every platform: the native macOS
+    // About panel always shows the bundle icon, which is Electron's in dev.
+    icon: app.isPackaged
+      ? join(process.resourcesPath, 'icon.png')
+      : resolve('resources/icon.png'),
+    title: APP_NAME,
+    message: `${APP_NAME} v${version}`,
+    detail: `Copyright © 2026\n${APP_HOMEPAGE_URL}`,
+    buttons: ['项目主页', '关闭'],
+    defaultId: 1,
+    cancelId: 1,
+  }
+  const showDialog = win && !win.isDestroyed()
+    ? dialog.showMessageBox(win, options)
+    : dialog.showMessageBox(options)
+  void showDialog
+    .then(({ response }) => {
+      if (response === 0) openHomepage()
+    })
+    .catch(error => {
       console.error('[Menu] Failed to show About dialog:', error)
     })
-  }
 }
 
 function applyMenu(columns: number | 'auto'): void {
@@ -218,25 +234,33 @@ function applyMenu(columns: number | 'auto'): void {
     onCommand: sendCommand,
     onAbout: showAbout,
     onCheckUpdates: () => startUpdateFlow(getMainWindowFn),
-    onHomepage: () => {
-      void shell.openExternal('https://github.com/huluohu/sidecar-monitor').catch(error => {
-        console.error('[Menu] Failed to open project homepage:', error)
-      })
-    },
+    onHomepage: openHomepage,
   })
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-/** Configure macOS About panel (call once after app is ready). */
-export function configureAboutPanel(iconPath?: string): void {
-  if (process.platform !== 'darwin') return
-  app.setAboutPanelOptions({
-    applicationName: APP_NAME,
-    applicationVersion: app.getVersion(),
-    copyright: 'Copyright © 2026',
-    website: 'https://github.com/huluohu/sidecar-monitor',
-    ...(iconPath ? { iconPath } : {}),
-  })
+/**
+ * Route an in-app toolbar menu action (Linux/Windows). The native menu bar is
+ * not rendered there (titleBarStyle: 'hidden'), so the renderer re-issues the
+ * same handlers through IPC.APP_MENU_ACTION.
+ */
+export function handleAppMenuAction(action: unknown): void {
+  switch (action) {
+    case 'check-updates':
+      startUpdateFlow(getMainWindowFn)
+      break
+    case 'about':
+      showAbout()
+      break
+    case 'homepage':
+      openHomepage()
+      break
+    case 'quit':
+      app.quit()
+      break
+    default:
+      console.warn(`[Menu] Ignoring unknown app menu action: ${String(action)}`)
+  }
 }
 
 /** Build and set the application menu. Call after config is loaded. */

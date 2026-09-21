@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/types'
-import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand } from '@shared/types'
+import type { AppConfig, SiteState, SlotBounds, AppMetrics, MenuCommand, AppMenuAction } from '@shared/types'
 
 /** Minimal API exposed to the trusted renderer via contextBridge. */
 const monitorAPI = {
@@ -63,6 +63,9 @@ const monitorAPI = {
 
   toggleFullscreen: (): Promise<void> =>
     ipcRenderer.invoke(IPC.APP_TOGGLE_FULLSCREEN),
+
+  appMenuAction: (action: AppMenuAction): Promise<void> =>
+    ipcRenderer.invoke(IPC.APP_MENU_ACTION, action),
 
   // ── Push events from main ────────────────────────────────────────────────
   onSiteStateChanged: (cb: (state: SiteState) => void): (() => void) => {

@@ -166,15 +166,17 @@ Linux arm64 原生 Runner 并行生成完整产物：
 
 1. 在 GitHub 仓库的 **Actions → Build and release → Run workflow** 手动触发。
 2. 构建完成后，在该工作流运行页面的 **Artifacts** 区域下载三平台产物。
-3. 发布版本时，先将 `package.json` 中的版本更新为目标版本，再推送同版本标签：
+3. 发布版本时使用发版脚本，它会预检分支与工作区状态，通过 `npm version`
+   同步更新 `package.json` 与 `package-lock.json`，创建版本提交和标签后一并推送：
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+npm run release -- patch   # 默认 patch；可换 minor、major 或具体版本号（如 0.2.0）
+npm run release -- --dry-run
 ```
 
-`v*` 标签会触发构建并自动创建 GitHub Release。标签必须与 `package.json`
-版本一致，否则发布任务会失败；手动触发只上传 Actions Artifacts，不创建 Release。
+`v*` 标签会触发构建并自动创建 GitHub Release。工作流第一步会校验标签与
+`package.json` 版本一致，不一致时在平台构建开始前即失败；手动触发只上传
+Actions Artifacts，不创建 Release。
 发布工作流会同时上传应用内更新所需的 `latest*.yml` 和 `.blockmap` 文件，请勿从
 Release 中删除这些文件，否则已安装客户端无法发现或下载该版本。
 

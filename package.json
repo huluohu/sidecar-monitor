@@ -1,6 +1,6 @@
 {
   "name": "sidecar-monitor",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Multi-site Sidecar monitor desktop tool",
   "homepage": "https://github.com/huluohu/sidecar-monitor",
   "author": {
@@ -20,6 +20,7 @@
     "dist:win": "npm run clean:release && npm run build && electron-builder --win --publish never",
     "dist:mac": "npm run clean:release && npm run build && electron-builder --mac --publish never",
     "dist:linux": "npm run clean:release && npm run build && electron-builder --linux --publish never",
+    "release": "node scripts/release.mjs",
     "verify:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {

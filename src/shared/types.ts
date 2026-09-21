@@ -49,6 +49,11 @@ export type MenuCommand =
   | { type: 'toggle-fullscreen' }
   | { type: 'set-columns'; columns: number | 'auto' }
 
+// Actions sent from the in-app toolbar menu (renderer) to main. The native
+// menu bar is not rendered on Linux/Windows (titleBarStyle: 'hidden'), so the
+// toolbar menu re-issues the main-side handlers behind it.
+export type AppMenuAction = 'check-updates' | 'about' | 'homepage' | 'quit'
+
 export const IPC = {
   // renderer → main (invoke)
   CONFIG_GET: 'config:get',
@@ -69,6 +74,7 @@ export const IPC = {
   APP_GET_FULLSCREEN: 'app:get-fullscreen',
   APP_TOGGLE_FULLSCREEN: 'app:toggle-fullscreen',
   APP_MOVE_SITE: 'app:move-site',
+  APP_MENU_ACTION: 'app:menu-action',
   // main → renderer (send)
   SITE_STATE_CHANGED: 'site-state-changed',
   CONFIG_CHANGED: 'config-changed',

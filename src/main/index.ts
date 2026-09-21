@@ -4,7 +4,7 @@ import { configStore } from './configStore'
 import { siteViewManager } from './siteViewManager'
 import { registerIpcHandlers } from './ipcHandlers'
 import { migrateFromLegacy } from './legacyMigration'
-import { buildAndSetMenu, configureAboutPanel } from './appMenu'
+import { buildAndSetMenu } from './appMenu'
 import { getWindowTitlebarOptions } from './windowTitlebar'
 import { IPC } from '@shared/types'
 
@@ -180,11 +180,6 @@ if (!hasSingleInstanceLock) {
     mainWindow.focus()
   })
   app.whenReady().then(() => {
-    configureAboutPanel(
-      app.isPackaged
-        ? join(process.resourcesPath, 'icon.png')
-        : resolve('resources/icon.png'),
-    )
     openWindow().catch(console.error)
 
     app.on('activate', () => {

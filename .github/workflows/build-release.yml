@@ -10,8 +10,27 @@ permissions:
   contents: read
 
 jobs:
+  verify:
+    name: Verify release version
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify tag matches package version
+        run: |
+          package_version="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$package_version" || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match package version $package_version"
+            exit 1
+          }
+
   package:
     name: Package ${{ matrix.name }}
+    needs: verify
+    if: ${{ !cancelled() && (needs.verify.result == 'success' || needs.verify.result == 'skipped') }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -107,18 +126,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Verify tag matches package version
-        shell: bash
-        run: |
-          package_version="v$(node -p "require('./package.json').version")"
-          test "$GITHUB_REF_NAME" = "$package_version" || {
-            echo "::error::Tag $GITHUB_REF_NAME does not match package version $package_version"
-            exit 1
-          }
-
       - name: Download packages
         uses: actions/download-artifact@v4
         with:

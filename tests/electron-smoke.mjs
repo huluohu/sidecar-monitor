@@ -246,6 +246,33 @@ try {
     )
   }
 
+  // ── In-app toolbar menu (Linux/Windows; macOS uses the native menu bar) ────
+  // The native menu bar is not rendered where the title bar is hidden, so the
+  // toolbar dropdown must exist there and route 设置 into the real drawer.
+  const menuButtonCount = await page.locator('.toolbar-menu-btn').count()
+  if (runtimePlatform === 'darwin') {
+    if (menuButtonCount !== 0) {
+      throw new Error('Expected no in-app menu button on macOS (native menu bar exists)')
+    }
+  } else {
+    if (menuButtonCount !== 1) {
+      throw new Error(`Expected 1 in-app menu button, received ${menuButtonCount}`)
+    }
+    await page.locator('.toolbar-menu-btn').click()
+    const menuPanel = page.locator('.app-menu-panel')
+    await menuPanel.waitFor({ state: 'visible', timeout: 3_000 })
+    const menuItemCount = await menuPanel.locator('.app-menu-item').count()
+    if (menuItemCount < 6) {
+      throw new Error(`Expected ≥6 in-app menu items, received ${menuItemCount}`)
+    }
+    await menuPanel.locator('[data-menu-id="settings"]').click()
+    const menuDrawer = page.locator('.drawer-overlay')
+    await menuDrawer.waitFor({ state: 'visible', timeout: 3_000 })
+    await page.locator('.drawer-header button[title="关闭"]').click()
+    await menuDrawer.waitFor({ state: 'detached', timeout: 3_000 })
+    console.log('In-app menu test passed: dropdown opened and routed 设置 to the drawer')
+  }
+
   // ── Assert native menu: version label ─────────────────────────────────────
   const menuVersion = await electronApp.evaluate(({ Menu, app }) => {
     const menu = Menu.getApplicationMenu()
