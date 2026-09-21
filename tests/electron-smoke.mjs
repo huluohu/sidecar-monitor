@@ -227,8 +227,14 @@ try {
           }
         : { supported: false, visible: false, width: 0 }
     })
-    if (!overlay.supported || !overlay.visible || overlay.width <= 0) {
-      throw new Error(`Window Controls Overlay unavailable: ${JSON.stringify(overlay)}`)
+    if (!overlay.supported) {
+      throw new Error(`Window Controls Overlay API unavailable: ${JSON.stringify(overlay)}`)
+    }
+    // CI 的 Xvfb 没有窗口管理器，Chromium 会汇报 visible:false / width:0，
+    // 尽管 Electron 已接受 titleBarOverlay；只有真实桌面会话（Windows runner）
+    // 才要求 overlay 真正渲染。应用工具栏依赖平台 class + env() 兜底，不读该 API。
+    if (runtimePlatform === 'win32' && (!overlay.visible || overlay.width <= 0)) {
+      throw new Error(`Window Controls Overlay not visible: ${JSON.stringify(overlay)}`)
     }
   }
 

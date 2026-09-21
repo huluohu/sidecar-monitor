@@ -79,8 +79,6 @@ jobs:
         run: npx electron-builder ${{ matrix.builderArgs }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          CSC_LINK: ${{ matrix.verifyPlatform == 'mac' && secrets.MAC_CSC_LINK || matrix.verifyPlatform == 'win' && secrets.WIN_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.verifyPlatform == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || matrix.verifyPlatform == 'win' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
 
       - name: Validate package assets
         run: node scripts/verify-package.mjs ${{ matrix.verifyPlatform }}
