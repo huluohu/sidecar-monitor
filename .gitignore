@@ -7,4 +7,5 @@ release/
 /.idea/modules.xml
 /.idea/vcs.xml
 .zcode/
+.video_agent/
 /.idea/sidecar-monitor.iml
