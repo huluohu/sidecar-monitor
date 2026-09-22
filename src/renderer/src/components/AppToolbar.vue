@@ -4,11 +4,13 @@ import appIconUrl from '@resources/icon.svg?url'
 import AppIcon from './AppIcon.vue'
 import { APP_MENU_ITEMS } from '../utils/appMenuItems'
 import type { AppMenuActionId } from '../utils/appMenuItems'
+import type { LayoutMode } from '@shared/types'
 
 const props = defineProps<{
   failedCount: number
   isFocused: boolean
   columns: number | 'auto'
+  layoutMode: LayoutMode
   siteCount: number
   isFullscreen: boolean
 }>()
@@ -19,9 +21,16 @@ const emit = defineEmits<{
   toggleFullscreen: []
   openSettings: []
   setColumns: [columns: number | 'auto']
+  setLayoutMode: [mode: LayoutMode]
   importConfig: []
   exportConfig: []
 }>()
+
+const MODE_OPTIONS: Array<{ value: LayoutMode; label: string }> = [
+  { value: 'grid', label: '网格' },
+  { value: 'stage', label: '台前居中' },
+  { value: 'main-stack', label: '主屏侧堆' },
+]
 
 const COLUMN_OPTIONS = [
   { value: 'auto', label: '自动' },
@@ -67,6 +76,10 @@ function onGlobalKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onGlobalKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 
+function onModeChange(e: Event) {
+  emit('setLayoutMode', (e.target as HTMLSelectElement).value as LayoutMode)
+}
+
 function onColsChange(e: Event) {
   const val = (e.target as HTMLSelectElement).value
   emit('setColumns', val === 'auto' ? 'auto' : Number(val))
@@ -108,10 +121,25 @@ function onColsChange(e: Event) {
     <div class="toolbar-sep" />
 
     <label class="toolbar-columns">
+      <span class="toolbar-columns-label">方案</span>
+      <select
+        :value="layoutMode"
+        class="toolbar-columns-select"
+        @change="onModeChange"
+      >
+        <option v-for="opt in MODE_OPTIONS" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+    </label>
+
+    <label class="toolbar-columns">
       <span class="toolbar-columns-label">列数</span>
       <select
         :value="columns"
         class="toolbar-columns-select"
+        :disabled="layoutMode !== 'grid'"
+        :title="layoutMode !== 'grid' ? '仅网格布局可调列数' : undefined"
         @change="onColsChange"
       >
         <option v-for="opt in COLUMN_OPTIONS" :key="String(opt.value)" :value="opt.value">

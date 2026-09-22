@@ -11,10 +11,22 @@ export interface SiteConfig {
   zoomFactor: number
 }
 
+/**
+ * Arrangement presets for the site views.
+ * - grid: uniform grid; `columns` ('auto' or 1..20) picks the column count.
+ * - stage: designated site centered at 50% width, the rest split left/right.
+ * - main-stack: designated site at 75% width, the rest stacked in one right column.
+ */
+export type LayoutMode = 'grid' | 'stage' | 'main-stack'
+
 export interface AppConfig {
-  schemaVersion: 1
+  schemaVersion: 2
   sites: SiteConfig[]
+  /** Column count for layoutMode 'grid'; ignored by the stage presets. */
   columns: number | 'auto'
+  layoutMode: LayoutMode
+  /** Designated stage site; null = fall back to the first enabled site. */
+  stageSiteId: string | null
   fullscreenOnLaunch: boolean
 }
 
@@ -48,6 +60,7 @@ export type MenuCommand =
   | { type: 'refresh-all' }
   | { type: 'toggle-fullscreen' }
   | { type: 'set-columns'; columns: number | 'auto' }
+  | { type: 'set-layout-mode'; mode: LayoutMode }
 
 // Actions sent from the in-app toolbar menu (renderer) to main. The native
 // menu bar is not rendered on Linux/Windows (titleBarStyle: 'hidden'), so the

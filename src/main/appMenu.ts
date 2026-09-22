@@ -2,7 +2,7 @@ import { app, Menu, shell, dialog } from 'electron'
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
 import { join, resolve } from 'node:path'
 import { IPC } from '@shared/types'
-import type { MenuCommand } from '@shared/types'
+import type { LayoutMode, MenuCommand } from '@shared/types'
 import { configStore } from './configStore'
 import { startUpdateFlow } from './updateManager'
 
@@ -13,6 +13,7 @@ export interface MenuTemplateOpts {
   version: string
   appName: string
   columns: number | 'auto'
+  layoutMode: LayoutMode
   onCommand: (cmd: MenuCommand) => void
   onAbout: () => void
   onHomepage: () => void
@@ -30,6 +31,7 @@ export function buildMenuTemplate(opts: MenuTemplateOpts): MenuItemConstructorOp
     version,
     appName,
     columns,
+    layoutMode,
     onCommand,
     onAbout,
     onHomepage,
@@ -37,13 +39,36 @@ export function buildMenuTemplate(opts: MenuTemplateOpts): MenuItemConstructorOp
   } = opts
   const isMac = platform === 'darwin'
 
-  const layoutSubmenu: MenuItemConstructorOptions[] = COLUMN_VALUES.map(val => ({
+  const gridItems: MenuItemConstructorOptions[] = COLUMN_VALUES.map(val => ({
     id: `layout-${val}`,
     label: val === 'auto' ? 'Auto' : `${val} Columns`,
     type: 'radio' as const,
-    checked: columns === val,
+    checked: layoutMode === 'grid' && columns === val,
     click: () => onCommand({ type: 'set-columns', columns: val }),
   }))
+
+  const stageItems: MenuItemConstructorOptions[] = [
+    {
+      id: 'layout-stage',
+      label: 'Stage Center',
+      type: 'radio' as const,
+      checked: layoutMode === 'stage',
+      click: () => onCommand({ type: 'set-layout-mode', mode: 'stage' }),
+    },
+    {
+      id: 'layout-main-stack',
+      label: 'Main + Stack',
+      type: 'radio' as const,
+      checked: layoutMode === 'main-stack',
+      click: () => onCommand({ type: 'set-layout-mode', mode: 'main-stack' }),
+    },
+  ]
+
+  const layoutSubmenu: MenuItemConstructorOptions[] = [
+    ...gridItems,
+    { type: 'separator' as const },
+    ...stageItems,
+  ]
 
   const fileSubmenu: MenuItemConstructorOptions[] = [
     {
@@ -224,13 +249,14 @@ function showAbout(): void {
     })
 }
 
-function applyMenu(columns: number | 'auto'): void {
+function applyMenu(columns: number | 'auto', layoutMode: LayoutMode): void {
   const version = app.getVersion()
   const template = buildMenuTemplate({
     platform: process.platform,
     version,
     appName: APP_NAME,
     columns,
+    layoutMode,
     onCommand: sendCommand,
     onAbout: showAbout,
     onCheckUpdates: () => startUpdateFlow(getMainWindowFn),
@@ -266,10 +292,11 @@ export function handleAppMenuAction(action: unknown): void {
 /** Build and set the application menu. Call after config is loaded. */
 export function buildAndSetMenu(getMainWindow: () => BrowserWindow | null): void {
   getMainWindowFn = getMainWindow
-  applyMenu(configStore.get().columns)
+  const config = configStore.get()
+  applyMenu(config.columns, config.layoutMode)
 }
 
-/** Rebuild menu with updated column checked state. */
-export function syncColumnsMenu(columns: number | 'auto'): void {
-  applyMenu(columns)
+/** Rebuild menu with updated layout checked state. */
+export function syncLayoutMenu(columns: number | 'auto', layoutMode: LayoutMode): void {
+  applyMenu(columns, layoutMode)
 }

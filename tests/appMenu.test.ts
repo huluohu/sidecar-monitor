@@ -28,6 +28,7 @@ const baseOpts: MenuTemplateOpts = {
   version: '0.1.3',
   appName: 'Sidecar Monitor',
   columns: 'auto',
+  layoutMode: 'grid',
   onCommand: vi.fn(),
   onAbout: vi.fn(),
   onHomepage: vi.fn(),
@@ -117,10 +118,12 @@ describe('buildMenuTemplate — Edit roles', () => {
 })
 
 describe('buildMenuTemplate — Layout columns', () => {
-  it('Layout menu has 21 radio items (auto + 1–20)', () => {
+  it('Layout menu has 21 grid radios, a separator, and 2 preset radios', () => {
     const items = findSubmenu(buildMenuTemplate(baseOpts), 'Layout')
-    expect(items).toHaveLength(21)
-    expect(items.every(i => i.type === 'radio')).toBe(true)
+    expect(items).toHaveLength(24)
+    const radios = items.filter(i => i.type === 'radio')
+    expect(radios).toHaveLength(23)
+    expect(items.filter(i => i.type === 'separator')).toHaveLength(1)
   })
 
   it('auto checked when columns is auto', () => {
@@ -140,6 +143,17 @@ describe('buildMenuTemplate — Layout columns', () => {
     expect(items.filter(i => i.checked)[0].id).toBe('layout-20')
   })
 
+  it('no column checked when a stage preset is active; the preset itself is', () => {
+    const items = findSubmenu(
+      buildMenuTemplate({ ...baseOpts, columns: 5, layoutMode: 'stage' }),
+      'Layout',
+    )
+    const checked = items.filter(i => i.checked)
+    expect(checked).toHaveLength(1)
+    expect(checked[0].id).toBe('layout-stage')
+    expect(items.filter(i => i.checked && i.id !== 'layout-stage' && i.id !== 'layout-main-stack')).toEqual([])
+  })
+
   it('set-columns command emitted with numeric value on click', () => {
     const onCommand = vi.fn<[MenuCommand], void>()
     const items = findSubmenu(buildMenuTemplate({ ...baseOpts, onCommand }), 'Layout')
@@ -154,6 +168,41 @@ describe('buildMenuTemplate — Layout columns', () => {
     const autoItem = items.find(i => i.id === 'layout-auto')!
     autoItem.click!(autoItem as never, {} as never, {} as never)
     expect(onCommand).toHaveBeenCalledWith({ type: 'set-columns', columns: 'auto' })
+  })
+})
+
+describe('buildMenuTemplate — Layout stage presets', () => {
+  it('Stage Center checked when layoutMode is stage', () => {
+    const items = findSubmenu(buildMenuTemplate({ ...baseOpts, layoutMode: 'stage' }), 'Layout')
+    const checked = items.filter(i => i.checked)
+    expect(checked).toHaveLength(1)
+    expect(checked[0].id).toBe('layout-stage')
+  })
+
+  it('Main + Stack checked when layoutMode is main-stack', () => {
+    const items = findSubmenu(
+      buildMenuTemplate({ ...baseOpts, layoutMode: 'main-stack' }),
+      'Layout',
+    )
+    const checked = items.filter(i => i.checked)
+    expect(checked).toHaveLength(1)
+    expect(checked[0].id).toBe('layout-main-stack')
+  })
+
+  it('set-layout-mode stage emitted from Stage Center click', () => {
+    const onCommand = vi.fn<[MenuCommand], void>()
+    const items = findSubmenu(buildMenuTemplate({ ...baseOpts, onCommand }), 'Layout')
+    const stage = items.find(i => i.id === 'layout-stage')!
+    stage.click!(stage as never, {} as never, {} as never)
+    expect(onCommand).toHaveBeenCalledWith({ type: 'set-layout-mode', mode: 'stage' })
+  })
+
+  it('set-layout-mode main-stack emitted from Main + Stack click', () => {
+    const onCommand = vi.fn<[MenuCommand], void>()
+    const items = findSubmenu(buildMenuTemplate({ ...baseOpts, onCommand }), 'Layout')
+    const main = items.find(i => i.id === 'layout-main-stack')!
+    main.click!(main as never, {} as never, {} as never)
+    expect(onCommand).toHaveBeenCalledWith({ type: 'set-layout-mode', mode: 'main-stack' })
   })
 })
 

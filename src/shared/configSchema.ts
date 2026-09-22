@@ -1,14 +1,16 @@
 /**
  * Config schema, validation, and migration — no Electron deps, fully testable.
  */
-import type { AppConfig, SiteConfig } from './types'
+import type { AppConfig, LayoutMode, SiteConfig } from './types'
 
-export const SCHEMA_VERSION = 1 as const
+export const SCHEMA_VERSION = 2 as const
 
 export const DEFAULT_CONFIG: AppConfig = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   sites: [],
   columns: 'auto',
+  layoutMode: 'grid',
+  stageSiteId: null,
   fullscreenOnLaunch: false,
 }
 
@@ -49,6 +51,10 @@ export function validateColumns(v: unknown): v is number | 'auto' {
   )
 }
 
+export function validateLayoutMode(v: unknown): v is LayoutMode {
+  return v === 'grid' || v === 'stage' || v === 'main-stack'
+}
+
 /** Clamp to the valid zoom range (0.1–5.0) and round to the UI step of 0.1. */
 export function normalizeZoomFactor(value: number): number {
   const clamped = Math.max(0.1, Math.min(5.0, value))
@@ -57,6 +63,7 @@ export function normalizeZoomFactor(value: number): number {
 
 /**
  * Parse and validate a raw config object, returning a clean AppConfig.
+ * Accepts schemaVersion 1 (migrated in place: layout fields get defaults) and 2.
  * Throws on invalid input so broken configuration is never partially applied.
  */
 export function parseConfig(raw: unknown): AppConfig {
@@ -65,7 +72,7 @@ export function parseConfig(raw: unknown): AppConfig {
   }
   const o = raw as Record<string, unknown>
 
-  if (o.schemaVersion !== SCHEMA_VERSION) {
+  if (o.schemaVersion !== 1 && o.schemaVersion !== 2) {
     throw new Error(`Unsupported schemaVersion: ${String(o.schemaVersion)}`)
   }
   if (!Array.isArray(o.sites)) {
@@ -78,6 +85,18 @@ export function parseConfig(raw: unknown): AppConfig {
     throw new Error('Invalid fullscreenOnLaunch')
   }
 
+  let layoutMode: LayoutMode = 'grid'
+  let stageSiteId: string | null = null
+  if (o.schemaVersion === 2) {
+    if (!validateLayoutMode(o.layoutMode)) {
+      throw new Error('Invalid layoutMode')
+    }
+    layoutMode = o.layoutMode
+    if (o.stageSiteId !== null && typeof o.stageSiteId !== 'string') {
+      throw new Error('Invalid stageSiteId')
+    }
+  }
+
   const sites = (o.sites as unknown[]).map((site, index) => {
     if (!validateSite(site)) {
       throw new Error(`Invalid site at index ${index}`)
@@ -88,10 +107,18 @@ export function parseConfig(raw: unknown): AppConfig {
     throw new Error('Site IDs must be unique')
   }
 
+  // A dangling stage reference (site removed/disabled, or ids regenerated on
+  // import) falls back to null rather than failing the whole config.
+  if (typeof o.stageSiteId === 'string' && sites.some(site => site.id === o.stageSiteId)) {
+    stageSiteId = o.stageSiteId
+  }
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sites,
     columns: o.columns,
+    layoutMode,
+    stageSiteId,
     fullscreenOnLaunch: o.fullscreenOnLaunch,
   }
 }

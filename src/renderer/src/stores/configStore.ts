@@ -1,6 +1,6 @@
 import { ref, computed, toRaw } from 'vue'
 import { defineStore } from 'pinia'
-import type { AppConfig, SiteConfig } from '@shared/types'
+import type { AppConfig, LayoutMode, SiteConfig } from '@shared/types'
 import { DEFAULT_CONFIG } from '@shared/configSchema'
 import { randomId } from '../utils/random'
 
@@ -56,8 +56,23 @@ export const useConfigStore = defineStore('config', () => {
     await save({ ...config.value, sites })
   }
 
+  /**
+   * Pick the grid column count. A column choice always implies the grid
+   * preset: the native Layout menu exposes column radios even while a stage
+   * preset is active, and picking one means "back to grid with N columns".
+   */
   async function setColumns(columns: number | 'auto'): Promise<void> {
-    await save({ ...config.value, columns })
+    await save({ ...config.value, columns, layoutMode: 'grid' })
+  }
+
+  /** Switch the arrangement preset. */
+  async function setLayoutMode(layoutMode: LayoutMode): Promise<void> {
+    await save({ ...config.value, layoutMode })
+  }
+
+  /** Designate the stage site (persisted; survives reorder by id). */
+  async function setStageSite(stageSiteId: string | null): Promise<void> {
+    await save({ ...config.value, stageSiteId })
   }
 
   async function setFullscreenOnLaunch(v: boolean): Promise<void> {
@@ -86,6 +101,8 @@ export const useConfigStore = defineStore('config', () => {
     moveSite,
     reorderSites,
     setColumns,
+    setLayoutMode,
+    setStageSite,
     setFullscreenOnLaunch,
     applyExternalUpdate,
   }
@@ -119,6 +136,8 @@ export function createConfigSnapshot(config: AppConfig): AppConfig {
     schemaVersion: config.schemaVersion,
     sites: config.sites.map(site => ({ ...toRaw(site) })),
     columns: config.columns,
+    layoutMode: config.layoutMode,
+    stageSiteId: config.stageSiteId,
     fullscreenOnLaunch: config.fullscreenOnLaunch,
   }
 }

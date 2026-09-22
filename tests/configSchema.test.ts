@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseConfig, validateSite, isHttpUrl, normalizeZoomFactor, DEFAULT_CONFIG } from '../src/shared/configSchema'
+import { parseConfig, validateSite, isHttpUrl, normalizeZoomFactor, validateLayoutMode, DEFAULT_CONFIG } from '../src/shared/configSchema'
 import type { AppConfig } from '../src/shared/types'
 
 describe('isHttpUrl', () => {
@@ -58,10 +58,16 @@ describe('validateSite', () => {
 
 describe('parseConfig', () => {
   const minimal: AppConfig = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sites: [],
     columns: 'auto',
+    layoutMode: 'grid',
+    stageSiteId: null,
     fullscreenOnLaunch: false,
+  }
+
+  function makeSite(id: string, order: number) {
+    return { id, name: `Site ${id}`, url: 'https://example.com', enabled: true, order, zoomFactor: 1 }
   }
 
   it('parses a minimal valid config', () => {
@@ -74,7 +80,45 @@ describe('parseConfig', () => {
   })
 
   it('throws on unknown schemaVersion', () => {
-    expect(() => parseConfig({ ...minimal, schemaVersion: 2 })).toThrow('schemaVersion')
+    expect(() => parseConfig({ ...minimal, schemaVersion: 3 })).toThrow('schemaVersion')
+  })
+
+  it('migrates schemaVersion 1 to 2 with layout defaults', () => {
+    const v1 = {
+      schemaVersion: 1,
+      sites: [],
+      columns: 3,
+      fullscreenOnLaunch: true,
+    }
+    expect(parseConfig(v1)).toEqual({
+      schemaVersion: 2,
+      sites: [],
+      columns: 3,
+      layoutMode: 'grid',
+      stageSiteId: null,
+      fullscreenOnLaunch: true,
+    })
+  })
+
+  it('rejects invalid layoutMode in v2', () => {
+    expect(() => parseConfig({ ...minimal, layoutMode: 'carousel' })).toThrow('layoutMode')
+    expect(() => parseConfig({ ...minimal, layoutMode: undefined })).toThrow('layoutMode')
+    expect(parseConfig({ ...minimal, layoutMode: 'stage' }).layoutMode).toBe('stage')
+    expect(parseConfig({ ...minimal, layoutMode: 'main-stack' }).layoutMode).toBe('main-stack')
+  })
+
+  it('rejects non-string non-null stageSiteId', () => {
+    expect(() => parseConfig({ ...minimal, stageSiteId: 42 })).toThrow('stageSiteId')
+    expect(parseConfig({ ...minimal, stageSiteId: null }).stageSiteId).toBe(null)
+  })
+
+  it('coerces dangling stageSiteId to null instead of failing', () => {
+    const raw = {
+      ...minimal,
+      sites: [makeSite('a', 0)],
+    }
+    expect(parseConfig({ ...raw, stageSiteId: 'missing' }).stageSiteId).toBe(null)
+    expect(parseConfig({ ...raw, stageSiteId: 'a' }).stageSiteId).toBe('a')
   })
 
   it('throws if sites is not an array', () => {
@@ -115,6 +159,30 @@ describe('parseConfig', () => {
       zoomFactor: 1,
     }
     expect(() => parseConfig({ ...minimal, sites: [site, { ...site, order: 1 }] })).toThrow('unique')
+  })
+})
+
+describe('validateLayoutMode', () => {
+  it('accepts the three presets', () => {
+    expect(validateLayoutMode('grid')).toBe(true)
+    expect(validateLayoutMode('stage')).toBe(true)
+    expect(validateLayoutMode('main-stack')).toBe(true)
+  })
+
+  it('rejects anything else', () => {
+    expect(validateLayoutMode('auto')).toBe(false)
+    expect(validateLayoutMode('')).toBe(false)
+    expect(validateLayoutMode(null)).toBe(false)
+    expect(validateLayoutMode(undefined)).toBe(false)
+  })
+})
+
+describe('DEFAULT_CONFIG', () => {
+  it('is a valid v2 config', () => {
+    expect(DEFAULT_CONFIG.schemaVersion).toBe(2)
+    expect(DEFAULT_CONFIG.layoutMode).toBe('grid')
+    expect(DEFAULT_CONFIG.stageSiteId).toBe(null)
+    expect(parseConfig(DEFAULT_CONFIG)).toEqual(DEFAULT_CONFIG)
   })
 })
 

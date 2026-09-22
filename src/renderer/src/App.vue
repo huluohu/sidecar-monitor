@@ -50,11 +50,14 @@ function flushBounds() {
   if (W < 1 || H < 1) return
 
   const cfg = configStore.config
+  const stageActive = cfg.layoutMode !== 'grid' && !focusedId.value
   const cols = focusedId.value
     ? 1
-    : cfg.columns === 'auto'
-      ? autoColumns(sites.length, W, H)
-      : Math.max(1, Math.min(cfg.columns, sites.length))
+    : stageActive
+      ? layoutColumns.value
+      : cfg.columns === 'auto'
+        ? autoColumns(sites.length, W, H)
+        : Math.max(1, Math.min(cfg.columns, sites.length))
   if (layoutColumns.value !== cols) {
     layoutColumns.value = cols
     nextTick(scheduleBoundsFlush)
@@ -142,6 +145,14 @@ onMounted(async () => {
           )
         })
         break
+      case 'set-layout-mode':
+        configStore.setLayoutMode(cmd.mode).catch(error => {
+          showToastMessage(
+            `布局更新失败：${error instanceof Error ? error.message : String(error)}`,
+            'error',
+          )
+        })
+        break
     }
   })
 
@@ -168,6 +179,8 @@ watch(() => configStore.enabledSites, (sites) => {
   scheduleBoundsFlush()
 }, { deep: true })
 watch(() => configStore.config.columns, () => scheduleBoundsFlush())
+watch(() => configStore.config.layoutMode, () => scheduleBoundsFlush())
+watch(() => configStore.config.stageSiteId, () => scheduleBoundsFlush())
 watch(
   () => showSettings.value || showConfirm.value || settingsOverlayActive.value,
   (hidden) => {
@@ -186,6 +199,17 @@ async function handleUnfocus() {
   focusedId.value = null
   await window.monitorAPI.focusSite(null)
   scheduleBoundsFlush()
+}
+
+async function handleSetStage(id: string) {
+  try {
+    await configStore.setStageSite(id)
+  } catch (error) {
+    showToastMessage(
+      `台前设置失败：${error instanceof Error ? error.message : String(error)}`,
+      'error',
+    )
+  }
 }
 
 async function handleReorder(sourceId: string, targetId: string) {
@@ -262,6 +286,7 @@ async function handleExportConfig() {
       :failed-count="stateStore.failedCount"
       :is-focused="focusedId !== null"
       :columns="configStore.config.columns"
+      :layout-mode="configStore.config.layoutMode"
       :site-count="configStore.enabledSites.length"
       :is-fullscreen="isFullscreen"
       @unfocus="handleUnfocus"
@@ -269,6 +294,7 @@ async function handleExportConfig() {
       @toggle-fullscreen="handleToggleFullscreen"
       @open-settings="showSettings = true"
       @set-columns="c => configStore.setColumns(c)"
+      @set-layout-mode="m => configStore.setLayoutMode(m)"
       @import-config="handleImportConfig"
       @export-config="handleExportConfig"
     />
@@ -280,9 +306,12 @@ async function handleExportConfig() {
         :states-map="stateStore.statesMap"
         :focused-id="focusedId"
         :effective-cols="layoutColumns"
+        :layout-mode="configStore.config.layoutMode"
+        :stage-site-id="configStore.config.stageSiteId"
         @focus="handleFocus"
         @unfocus="handleUnfocus"
         @reorder="handleReorder"
+        @set-stage="handleSetStage"
       />
       <div v-else class="empty-state">
         <div class="empty-state-icon">

@@ -172,6 +172,11 @@ withDefaults(defineProps<{
       <circle cx="8" cy="8" r="5.7" stroke="currentColor" stroke-width="1.5" />
       <path d="m5.2 8.1 1.8 1.8 3.8-3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
     </template>
+
+    <template v-else-if="name === 'stage'">
+      <rect x="2.2" y="4.2" width="11.6" height="7.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+      <rect x="5.8" y="6.7" width="4.4" height="2.6" rx="0.6" fill="currentColor" />
+    </template>
   </svg>
 </template>
 

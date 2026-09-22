@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { autoColumns, computeLayout } from '../src/shared/layout'
+import { autoColumns, computeLayout, resolveStageSplit, stageGridTemplate } from '../src/shared/layout'
 
 describe('autoColumns', () => {
   it('returns 1 for 0 sites', () => {
@@ -91,5 +91,111 @@ describe('computeLayout', () => {
     expect(cells).toHaveLength(2)
     // With cols clamped to 2, each cell width is 400
     expect(cells[0].width).toBe(400)
+  })
+})
+
+describe('resolveStageSplit', () => {
+  it('returns null for no sites', () => {
+    expect(resolveStageSplit([], null)).toBe(null)
+  })
+
+  it('falls back to the first site when stageSiteId is null', () => {
+    const split = resolveStageSplit(['a', 'b', 'c'], null)!
+    expect(split.stageId).toBe('a')
+  })
+
+  it('falls back to the first site when stageSiteId is dangling', () => {
+    const split = resolveStageSplit(['a', 'b'], 'gone')!
+    expect(split.stageId).toBe('a')
+  })
+
+  it('5 sites (odd): stage + 2 left + 2 right, perfectly symmetric', () => {
+    const split = resolveStageSplit(['a', 'b', 'c', 'd', 'e'], 'a')!
+    expect(split.stageId).toBe('a')
+    expect(split.leftIds).toEqual(['b', 'c'])
+    expect(split.rightIds).toEqual(['d', 'e'])
+  })
+
+  it('4 sites (even): the extra site goes to the left column', () => {
+    const split = resolveStageSplit(['a', 'b', 'c', 'd'], 'a')!
+    expect(split.leftIds).toEqual(['b', 'c'])
+    expect(split.rightIds).toEqual(['d'])
+  })
+
+  it('single site: no side columns', () => {
+    const split = resolveStageSplit(['a'], null)!
+    expect(split.stageId).toBe('a')
+    expect(split.leftIds).toEqual([])
+    expect(split.rightIds).toEqual([])
+  })
+
+  it('two sites: one companion on the left', () => {
+    const split = resolveStageSplit(['a', 'b'], 'b')!
+    expect(split.stageId).toBe('b')
+    expect(split.leftIds).toEqual(['a'])
+    expect(split.rightIds).toEqual([])
+  })
+})
+
+describe('stageGridTemplate', () => {
+  it('single site collapses to one full-size track', () => {
+    const split = resolveStageSplit(['a'], null)!
+    const spec = stageGridTemplate(split, 'stage')
+    expect(spec.columns).toBe('1fr')
+    expect(spec.rows).toBe('1fr')
+    expect(spec.placement.a).toEqual({ colStart: 1, colSpan: 1, rowStart: 1, rowSpan: 1 })
+  })
+
+  it('5 sites in stage mode: 1fr 2fr 1fr tracks, stage spans all rows in the middle column', () => {
+    const split = resolveStageSplit(['a', 'b', 'c', 'd', 'e'], 'a')!
+    const spec = stageGridTemplate(split, 'stage')
+    expect(spec.columns).toBe('1fr 2fr 1fr')
+    expect(spec.rows).toBe('repeat(2, 1fr)')
+    expect(spec.placement.a).toEqual({ colStart: 2, colSpan: 1, rowStart: 1, rowSpan: 2 })
+    expect(spec.placement.b).toEqual({ colStart: 1, colSpan: 1, rowStart: 1, rowSpan: 1 })
+    expect(spec.placement.c).toEqual({ colStart: 1, colSpan: 1, rowStart: 2, rowSpan: 1 })
+    expect(spec.placement.d).toEqual({ colStart: 3, colSpan: 1, rowStart: 1, rowSpan: 1 })
+    expect(spec.placement.e).toEqual({ colStart: 3, colSpan: 1, rowStart: 2, rowSpan: 1 })
+  })
+
+  it('4 sites in stage mode: asymmetric tracks with empty right top rows allowed', () => {
+    const split = resolveStageSplit(['a', 'b', 'c', 'd'], 'a')!
+    const spec = stageGridTemplate(split, 'stage')
+    expect(spec.columns).toBe('1fr 2fr 1fr')
+    // Stage spans both rows; right column has one cell (top row), bottom row empty
+    expect(spec.placement.d).toEqual({ colStart: 3, colSpan: 1, rowStart: 1, rowSpan: 1 })
+  })
+
+  it('main-stack: 3fr 1fr tracks, stack keeps left-then-right order', () => {
+    const split = resolveStageSplit(['a', 'b', 'c', 'd'], 'a')!
+    const spec = stageGridTemplate(split, 'main-stack')
+    expect(spec.columns).toBe('3fr 1fr')
+    expect(spec.placement.a).toEqual({ colStart: 1, colSpan: 1, rowStart: 1, rowSpan: 3 })
+    expect(spec.placement.b).toEqual({ colStart: 2, colSpan: 1, rowStart: 1, rowSpan: 1 })
+    expect(spec.placement.c).toEqual({ colStart: 2, colSpan: 1, rowStart: 2, rowSpan: 1 })
+    expect(spec.placement.d).toEqual({ colStart: 2, colSpan: 1, rowStart: 3, rowSpan: 1 })
+  })
+
+  it('every site has a placement and no two cells overlap', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+    for (const arrangement of ['stage', 'main-stack'] as const) {
+      const split = resolveStageSplit(ids, 'c')!
+      const spec = stageGridTemplate(split, arrangement)
+      for (const id of ids) {
+        expect(spec.placement[id], `${arrangement} placement for ${id}`).toBeDefined()
+      }
+      // Overlap check: same (col,row) impossible
+      const occupied = new Set<string>()
+      for (const id of ids) {
+        const p = spec.placement[id]!
+        for (let col = p.colStart; col < p.colStart + p.colSpan; col++) {
+          for (let row = p.rowStart; row < p.rowStart + p.rowSpan; row++) {
+            const key = `${col},${row}`
+            expect(occupied.has(key), `${arrangement} overlap at ${key} (${id})`).toBe(false)
+            occupied.add(key)
+          }
+        }
+      }
+    }
   })
 })

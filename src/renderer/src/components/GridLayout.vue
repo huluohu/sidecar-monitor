@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { SiteConfig, SiteState } from '@shared/types'
+import type { LayoutMode, SiteConfig, SiteState } from '@shared/types'
+import { resolveStageSplit, stageGridTemplate } from '../utils/layout'
+import type { StagePlacement } from '../utils/layout'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{
@@ -8,12 +10,15 @@ const props = defineProps<{
   statesMap: Map<string, SiteState>
   focusedId: string | null
   effectiveCols: number
+  layoutMode: LayoutMode
+  stageSiteId: string | null
 }>()
 
 const emit = defineEmits<{
   focus: [id: string]
   unfocus: []
   reorder: [sourceId: string, targetId: string]
+  setStage: [id: string]
 }>()
 
 const api = window.monitorAPI
@@ -29,6 +34,45 @@ const cols = computed(() => Math.max(1, props.effectiveCols))
 const rows = computed(() =>
   props.focusedId ? 1 : Math.max(1, Math.ceil(props.sites.length / cols.value)),
 )
+
+/** Stage presets arrange cells explicitly; focus mode keeps the plain grid. */
+const stageActive = computed(() => props.layoutMode !== 'grid' && !props.focusedId)
+const split = computed(() =>
+  stageActive.value
+    ? resolveStageSplit(props.sites.map(site => site.id), props.stageSiteId)
+    : null,
+)
+const stageSpec = computed(() =>
+  split.value
+    ? stageGridTemplate(split.value, props.layoutMode === 'main-stack' ? 'main-stack' : 'stage')
+    : null,
+)
+
+const gridStyle = computed(() => {
+  if (stageSpec.value) {
+    return {
+      gridTemplateColumns: stageSpec.value.columns,
+      gridTemplateRows: stageSpec.value.rows,
+    }
+  }
+  return {
+    gridTemplateColumns: `repeat(${cols.value}, 1fr)`,
+    gridTemplateRows: `repeat(${rows.value}, minmax(0, 1fr))`,
+  }
+})
+
+function cellStyle(siteId: string): Record<string, string> {
+  const p: StagePlacement | undefined = stageSpec.value?.placement[siteId]
+  if (!p) return {}
+  return {
+    gridColumn: `${p.colStart} / span ${p.colSpan}`,
+    gridRow: `${p.rowStart} / span ${p.rowSpan}`,
+  }
+}
+
+function isStageSite(siteId: string): boolean {
+  return split.value?.stageId === siteId
+}
 
 function stateOf(id: string): SiteState | undefined {
   return props.statesMap.get(id)
@@ -70,11 +114,7 @@ function clearDragState() {
 <template>
   <div
     class="grid-css"
-    :style="{
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols}, 1fr)`,
-      gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-    }"
+    :style="gridStyle"
   >
     <div
       v-for="site in sites"
@@ -84,9 +124,11 @@ function clearDragState() {
       :class="{
         'grid-cell--hidden': focusedId && focusedId !== site.id,
         'grid-cell--focused': focusedId === site.id,
+        'grid-cell--stage': stageActive && isStageSite(site.id),
         'grid-cell--dragging': draggedId === site.id,
         'grid-cell--drop-target': dropTargetId === site.id,
       }"
+      :style="cellStyle(site.id)"
       @dragover="onDragOver($event, site.id)"
       @drop="onDrop($event, site.id)"
     >
@@ -102,6 +144,10 @@ function clearDragState() {
           :class="stateOf(site.id)?.status ?? 'loading'"
         />
         <span class="cell-name" :title="site.name">{{ site.name }}</span>
+        <span
+          v-if="stageActive && isStageSite(site.id)"
+          class="cell-stage-badge"
+        >{{ layoutMode === 'main-stack' ? '主屏' : '台前' }}</span>
         <div class="cell-actions">
           <button
             v-if="stateOf(site.id)?.canGoBack"
@@ -143,6 +189,15 @@ function clearDragState() {
             @click="api.setSiteZoom(site.id, Math.min(5, site.zoomFactor + 0.1))"
           >
             <AppIcon name="zoom-in" :size="12" />
+          </button>
+
+          <button
+            v-if="stageActive && !isStageSite(site.id)"
+            class="cell-btn"
+            :title="layoutMode === 'main-stack' ? '设为主屏' : '设为台前'"
+            @click="emit('setStage', site.id)"
+          >
+            <AppIcon name="stage" :size="12" />
           </button>
 
           <button
